@@ -149,6 +149,7 @@ export default function Workbench({role,userEmail}:{role:string;userEmail:string
         {accessibleViews.map(item=><button key={item.id} className={"nav-button "+(view===item.id?"active":"")} aria-current={view===item.id?"page":undefined} onClick={()=>{setView(item.id);setError("");setNotice("");setDetail(null);}}>
           <span className="nav-icon">{item.symbol}</span>{item.label}
         </button>)}
+        <a className="nav-button" href="/assistant"><span className="nav-icon">✦</span> AI Financial Analyst</a>
       </nav>
       <div className="sidebar-footer">
         <div style={{fontWeight:700}}>{userEmail}</div><small>Role: {role.replaceAll("_"," ")}</small>
