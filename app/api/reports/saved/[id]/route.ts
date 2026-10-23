@@ -48,8 +48,8 @@ export async function GET(_req:NextRequest,context:Ctx){
       coalesce(sum(CASE WHEN a.type IN ('expense','asset') THEN l.debit-l.credit ELSE l.credit-l.debit END),0)::text AS actual,
       (coalesce(sum(CASE WHEN a.type IN ('expense','asset') THEN l.debit-l.credit ELSE l.credit-l.debit END),0)-b.amount)::text AS variance
       FROM budgets b JOIN accounts a ON a.id=b.account_id AND a.tenant_id=b.tenant_id
-      LEFT JOIN journal_lines l ON l.account_id=b.account_id AND l.tenant_id=b.tenant_id
-      LEFT JOIN journal_entries j ON j.id=l.entry_id AND j.tenant_id=l.tenant_id AND date_trunc('month',j.entry_date)::date=b.month
+      LEFT JOIN journal_entries j ON j.tenant_id=b.tenant_id AND date_trunc('month',j.entry_date)::date=b.month
+      LEFT JOIN journal_lines l ON l.entry_id=j.id AND l.tenant_id=j.tenant_id AND l.account_id=b.account_id
       WHERE b.tenant_id=$1 GROUP BY b.id,a.code,a.type,b.month,b.amount ORDER BY b.month DESC LIMIT 300`,[user.tenantId]);
     rows=r.rows;break;
    }
