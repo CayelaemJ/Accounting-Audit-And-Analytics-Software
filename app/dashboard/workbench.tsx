@@ -149,9 +149,9 @@ export default function Workbench({role,userEmail,isAdmin=false}:{role:string;us
         {accessibleViews.map(item=><button key={item.id} className={"nav-button "+(view===item.id?"active":"")} aria-current={view===item.id?"page":undefined} onClick={()=>{setView(item.id);setError("");setNotice("");setDetail(null);}}>
           <span className="nav-icon">{item.symbol}</span>{item.label}
         </button>)}
+        <a className="nav-button" href="/aging"><span className="nav-icon">▥</span> Receivables & payables</a>
         <a className="nav-button" href="/operations"><span className="nav-icon">▣</span> Financial operations</a>
         <a className="nav-button" href="/audit-trail"><span className="nav-icon">◎</span> Activity audit trail</a>
-        <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
         <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
         <a className="nav-button" href="/reversals"><span className="nav-icon">⇄</span> Journal reversals</a>
         <a className="nav-button" href="/security"><span className="nav-icon">♢</span> Account security</a>

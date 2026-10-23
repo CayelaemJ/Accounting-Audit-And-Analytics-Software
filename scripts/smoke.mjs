@@ -42,6 +42,15 @@ r=await request("/api/operations/invoices",{method:"POST",cookie,body:{
 assert.equal(r.status,201,"Invoice posting must be atomic");
 r=await request("/api/overview",{cookie});
 assert.equal(r.status,200);assert.equal(r.result.totals.revenue,"100.00","Actual posted revenue");
+r=await request("/api/operations/aging?asOf="+current,{cookie});
+assert.equal(r.status,200,"Authenticated invoice ageing");
+assert.equal(r.result.sales.totalOutstanding,"100.00","Customer receivables exclude no-payment activity");
+assert.equal(r.result.sales.current,"100.00","Invoices due today are not overdue");
+assert.equal(r.result.purchase.totalOutstanding,"0.00","No supplier payables without purchases");
+r=await request("/api/operations/aging?asOf=not-a-date",{cookie});
+assert.equal(r.status,400,"As-of reporting rejects invalid dates");
+r=await request("/api/operations/aging");
+assert.equal(r.status,401,"Ageing does not expose other organisations to visitors");
 const accountsBefore=(await request("/api/overview",{cookie})).result.accounts;
 const cash=accountsBefore.find(a=>a.code==="1000"),capital=accountsBefore.find(a=>a.code==="3000");
 const originalIdempotency=randomUUID();
