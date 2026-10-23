@@ -192,10 +192,14 @@ export default function OperationsClient(){
          <option value="">Choose your bank account</option>
          {bankAccounts.map(x=><option value={x.id} key={x.id}>{x.code} — {x.name}</option>)}
        </select></label>
+       <label>Bank account's last four characters from your statement
+        <input name="expectedLast4" type="text" required minLength={4} maxLength={4}
+          autoComplete="off" placeholder="e.g. 1234"/>
+       </label>
        <label>OFX or QFX file<input name="statement" type="file" accept=".ofx,.qfx" required/></label>
        <button className="button primary" disabled={working}>Import statement transactions</button>
      </form>
-     <p className="form-note" style={{marginTop:12}}>No direct access to your bank account is requested. The bank's source account is shown by its last four digits after import; this release does not automatically verify the selected ledger account against a bank registry.</p>
+     <p className="form-note" style={{marginTop:12}}>No direct access to your bank account is requested. The bank's source account is shown by its last four digits after import; your confirmation binds the source to this ledger account, preventing subsequent imports against a different account. Only an owner or finance manager can create that initial binding.</p>
    </section>}
    {canWrite&&<div className="content-grid">
     <section className="panel"><h3>Import bank statement CSV</h3>
