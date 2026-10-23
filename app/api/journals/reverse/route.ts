@@ -15,7 +15,7 @@ export async function POST(req:NextRequest){
   const parsed=schema.safeParse(await req.json());if(!parsed.success)return jsonError("Provide a journal, posting date and a reason of at least 10 characters.");
   const x=parsed.data;
   const result=await tenantTx(user,async c=>{
-   const original=await c.query("SELECT id,entry_date,memo FROM journal_entries WHERE tenant_id=$1 AND id=$2 FOR SHARE",[user.tenantId,x.journalId]);
+   const original=await c.query("SELECT id,entry_date,memo FROM journal_entries WHERE tenant_id=$1 AND id=$2",[user.tenantId,x.journalId]);
    if(!original.rowCount)throw new Error("Journal not found.");
    const linked=await c.query(`SELECT
     (SELECT count(*) FROM invoices WHERE tenant_id=$1 AND journal_id=$2) +
