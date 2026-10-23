@@ -64,6 +64,8 @@ test("phases 1-4: organisations, invoicing, banking, reporting, controls and per
   await c.query("INSERT INTO audit_tests(tenant_id,engagement_id,control_id,result,notes,tested_by) VALUES($1,$2,$3,'fail','Approval evidence incomplete',$4)",[a.org,e,control,a.user]);
   const finding=(await c.query("INSERT INTO audit_findings(tenant_id,title,severity,created_by) VALUES($1,'Payment approval exception','high',$2) RETURNING id",[a.org,a.user])).rows[0].id;
   await c.query("INSERT INTO remediation_actions(tenant_id,finding_id,description,due_date,created_by) VALUES($1,$2,'Review payments before posting',current_date,$3)",[a.org,finding,a.user]);
+  const saved=(await c.query("INSERT INTO saved_reports(tenant_id,name,template,created_by) VALUES($1,'Management trial balance','trial_balance',$2) RETURNING id",[a.org,a.user])).rows[0].id;
+  assert.ok(saved);
   const evidence=(await c.query("INSERT INTO audit_evidence(tenant_id,engagement_id,title,source_ref,evidence_sha256,submitted_by) VALUES($1,$2,'Approval checklist','CHECK-001',$3,$4) RETURNING id",[a.org,e,"b".repeat(64),a.user])).rows[0].id;
   assert.ok(evidence);
   const draft=(await c.query("INSERT INTO audit_reports(tenant_id,engagement_id,title,body,prepared_by) VALUES($1,$2,'FY2026 control report','Control review completed, exceptions require investigation.',$3) RETURNING id",[a.org,e,a.user])).rows[0].id;
