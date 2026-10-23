@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       const userId = user.rows[0].id as string;
       await setActor(client, userId, tenantId);
       const slug = organisation.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60) + "-" + tenantId.slice(0,8);
-      await client.query("INSERT INTO tenants(id,name,slug) VALUES($1,$2,$3)",[tenantId,organisation,slug]);
+      await client.query("INSERT INTO tenants(id,name,slug,created_by) VALUES($1,$2,$3,$4)",[tenantId,organisation,slug,userId]);
       await client.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES($1,$2,'owner')",[tenantId,userId]);
       for (const [code,name,type] of defaultAccounts) {
         await client.query("INSERT INTO accounts(tenant_id,code,name,type) VALUES($1,$2,$3,$4)",[tenantId,code,name,type]);

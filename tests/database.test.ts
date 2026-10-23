@@ -19,7 +19,7 @@ async function createTenant() {
     await c.query("BEGIN");
     await c.query("INSERT INTO users(id,email,password_hash) VALUES($1,$2,'test-only')",[userId,userId+"@example.test"]);
     await ctx(c,userId,tenantId);
-    await c.query("INSERT INTO tenants(id,name,slug) VALUES($1,'Integration Test',$2)",[tenantId,"integration-"+tenantId]);
+    await c.query("INSERT INTO tenants(id,name,slug,created_by) VALUES($1,'Integration Test',$2,$3)",[tenantId,"integration-"+tenantId,userId]);
     await c.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES($1,$2,'owner')",[tenantId,userId]);
     for (const [name,type] of [["Cash","asset"],["Capital","equity"]]) {
       const r=await c.query("INSERT INTO accounts(tenant_id,code,name,type) VALUES($1,$2,$3,$4) RETURNING id",
