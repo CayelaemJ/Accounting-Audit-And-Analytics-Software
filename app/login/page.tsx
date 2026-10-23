@@ -6,13 +6,14 @@ export default function Login() {
   const [identifier,setIdentifier] = useState("");
   const [password,setPassword] = useState("");
   const [loading,setLoading] = useState(false);
+  const [showPassword,setShowPassword] = useState(false);
   const [error,setError] = useState("");
   async function submit(e:FormEvent) {
     e.preventDefault(); setError(""); setLoading(true);
     try {
       const response = await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({identifier,password})});
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to sign in");
+      if (!response.ok) throw new Error(response.status===429?"Too many login attempts. Please retry after 15 minutes.":body.error || "Unable to sign in");
       window.location.replace("/dashboard");
     } catch (err) { setError((err as Error).message); } finally { setLoading(false); }
   }
@@ -31,7 +32,8 @@ export default function Login() {
       <p className="muted">Secure access to your organisation's financial records.</p>
       <form onSubmit={submit} className="stack-18">
         <label>Email address or username<input required type="text" value={identifier} autoComplete="username" onChange={e=>setIdentifier(e.target.value)} placeholder="name@company.co.za or username"/></label>
-        <label>Password<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Your password"/></label>
+        <label>Password<input required type={showPassword?"text":"password"} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Your password"/></label>
+        <label style={{display:"flex",alignItems:"center",gap:10}}><input type="checkbox" checked={showPassword} onChange={e=>setShowPassword(e.target.checked)} style={{width:"auto"}}/> Show password</label>
         {error && <div className="error-message" role="alert">{error}</div>}
         <button className="button primary full" type="submit" disabled={loading}>{loading?"Signing in…":"Access workspace →"}</button>
       </form>
