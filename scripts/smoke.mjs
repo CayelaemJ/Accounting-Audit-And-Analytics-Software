@@ -16,6 +16,13 @@ for(let i=0;i<45;i++){
  await new Promise(r=>setTimeout(r,500));
 }
 assert.ok(ready,"Next.js service did not become healthy");
+const homepage=await fetch(base+"/",{redirect:"manual"});
+assert.equal(homepage.status,200,"Public homepage must not redirect to sign in");
+const homeHTML=await homepage.text();
+assert.ok(homeHTML.includes("Turn financial complexity"),"Public marketing hero is visible without login");
+const dashboardBefore=await fetch(base+"/dashboard",{redirect:"manual"});
+assert.equal(dashboardBefore.status,307,"Protected workspace still redirects guests to login");
+
 let r=await request("/api/auth/register",{method:"POST",body:{email,password,organisation:"CI Example Company"}});
 assert.equal(r.status,201,"Registration must persist organisation, accounts and session");
 const cookie=r.cookie;assert.ok(cookie?.startsWith("cabo_session="),"Session cookie not set");
