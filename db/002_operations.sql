@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS audit_tests (
  FOREIGN KEY(tenant_id,control_id) REFERENCES audit_controls(tenant_id,id)
 );
 CREATE INDEX IF NOT EXISTS audit_tests_tenant_idx ON audit_tests(tenant_id,tested_at DESC);
+ALTER TABLE audit_findings ADD CONSTRAINT audit_findings_tenant_id_unique UNIQUE(tenant_id,id);
 CREATE TABLE IF NOT EXISTS remediation_actions (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id uuid NOT NULL REFERENCES tenants(id),
  finding_id uuid NOT NULL REFERENCES audit_findings(id), description text NOT NULL CHECK(length(description) BETWEEN 5 AND 1000),
@@ -134,7 +135,6 @@ CREATE TABLE IF NOT EXISTS remediation_actions (
  created_by uuid NOT NULL REFERENCES users(id), updated_at timestamptz NOT NULL DEFAULT now(),
  FOREIGN KEY(tenant_id,finding_id) REFERENCES audit_findings(tenant_id,id)
 );
-ALTER TABLE audit_findings ADD CONSTRAINT audit_findings_tenant_id_unique UNIQUE(tenant_id,id);
 
 -- RLS: no reads without matching verified session actor and tenant; writes require permitted role.
 DO $$DECLARE t text; BEGIN
