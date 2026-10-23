@@ -25,7 +25,7 @@ export async function POST(req:NextRequest){
    const duplicate=await c.query("SELECT 1 FROM journal_reversals WHERE tenant_id=$1 AND (original_entry_id=$2 OR reversal_entry_id=$2)",[user.tenantId,x.journalId]);
    if(duplicate.rowCount)throw new Error("Journal is already reversed or is itself a reversal.");
    const lines=await c.query("SELECT account_id,debit::text,credit::text FROM journal_lines WHERE tenant_id=$1 AND entry_id=$2 ORDER BY line_no",[user.tenantId,x.journalId]);
-   if(lines.rowCount<2)throw new Error("Original journal has no valid lines.");
+   if(lines.rows.length<2)throw new Error("Original journal has no valid lines.");
    const id=randomUUID();
    await c.query("INSERT INTO journal_entries(id,tenant_id,entry_date,memo,idempotency_key,created_by) VALUES($1,$2,$3,$4,$5,$6)",
     [id,user.tenantId,x.entryDate,"Reversal: "+original.rows[0].memo.slice(0,210),randomUUID(),user.userId]);
