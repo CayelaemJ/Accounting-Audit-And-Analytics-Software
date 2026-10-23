@@ -17,7 +17,7 @@ export default function Home(){
    <nav className="home-navlinks" aria-label="Homepage navigation">
     <a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#about">Why CABO</a>
    </nav>
-   <div className="home-nav-actions"><Link className="home-signin" href="/login">Sign in</Link><Link className="home-action" href="/register">Get started <span aria-hidden="true">↗</span></Link></div>
+   <div className="home-nav-actions"><Link className="home-action" href="/login">Sign in to your workspace <span aria-hidden="true">↗</span></Link><Link className="home-signin" href="/register">Create account</Link></div>
   </header>
 
   <section className="home-hero" aria-labelledby="home-headline">
@@ -26,7 +26,7 @@ export default function Home(){
     <div className="home-kicker"><span className="home-kicker-line"/> FINANCE. INTELLIGENCE. CONFIDENCE.</div>
     <h1 id="home-headline">Turn financial complexity into <em>clarity.</em></h1>
     <p className="home-lede">Accounting, analytics and assurance belong together. One connected workspace to manage your finances, understand performance and make decisions with greater confidence.</p>
-    <div className="home-hero-actions"><Link className="home-action home-action-large" href="/register">Start your workspace <span aria-hidden="true">↗</span></Link><a className="home-action-secondary" href="#platform">Explore the platform <span aria-hidden="true">↓</span></a></div>
+    <div className="home-hero-actions"><Link className="home-action home-action-large" href="/login">Access your workspace <span aria-hidden="true">↗</span></Link><a className="home-action-secondary" href="#platform">Explore the platform <span aria-hidden="true">↓</span></a></div>
     <p className="home-hero-note"><span className="home-status-dot"/> Secure organisation workspaces <span>·</span> Built for South African businesses</p>
    </div>
    <div className="home-visual" aria-label="Illustrative overview of platform capabilities">
@@ -51,7 +51,7 @@ export default function Home(){
    <div className="home-statement-glow"/><span className="home-eyebrow">BUILT WITH PURPOSE / CABO SOLUTIONS</span>
    <h2>Technology should work <em>for the business.</em><br/>Not the other way around.</h2>
    <p>CABO Financial Intelligence brings structured accounting, insightful reporting and transparent assurance together—while keeping your organisation's source records and human decisions at the centre.</p>
-   <Link className="home-action home-action-large" href="/register">Create your workspace <span aria-hidden="true">↗</span></Link>
+   <Link className="home-action home-action-large" href="/login">Sign in to CABO <span aria-hidden="true">↗</span></Link>
   </section>
   <footer className="home-footer"><div className="home-footer-brand"><span className="home-logo">C<span>.</span></span><div><strong>CABO Financial Intelligence</strong><p>Built by CABO Solutions · South Africa</p></div></div>
   <div className="home-footer-links"><a href="#platform">Platform</a><Link href="/login">Sign in</Link><Link href="/register">Get started</Link></div>

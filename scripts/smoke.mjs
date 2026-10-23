@@ -16,6 +16,10 @@ for(let i=0;i<45;i++){
  await new Promise(r=>setTimeout(r,500));
 }
 assert.ok(ready,"Next.js service did not become healthy");
+const homepage=await fetch(base+"/");assert.equal(homepage.status,200,"Public homepage required");
+assert.ok((await homepage.text()).includes("Access your workspace"),"Homepage sign-in CTA");
+const publicLogin=await fetch(base+"/login");assert.equal(publicLogin.status,200,"Login reachable");
+const protectedResponse=await fetch(base+"/dashboard",{redirect:"manual"});assert.ok([302,303,307,308].includes(protectedResponse.status),"Dashboard must remain authenticated");
 const homepage=await fetch(base+"/",{redirect:"manual"});
 assert.equal(homepage.status,200,"Public homepage must not redirect to sign in");
 const homeHTML=await homepage.text();

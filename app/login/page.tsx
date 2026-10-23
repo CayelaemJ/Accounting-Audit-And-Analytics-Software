@@ -1,9 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+
 export default function Login() {
-  const router = useRouter();
   const [identifier,setIdentifier] = useState("");
   const [password,setPassword] = useState("");
   const [loading,setLoading] = useState(false);
@@ -14,7 +13,7 @@ export default function Login() {
       const response = await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({identifier,password})});
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to sign in");
-      router.push("/dashboard"); router.refresh();
+      window.location.replace("/dashboard");
     } catch (err) { setError((err as Error).message); } finally { setLoading(false); }
   }
   return <main className="auth-layout">
@@ -27,7 +26,7 @@ export default function Login() {
     </section>
     <section className="auth-form-column"><div className="auth-form-wrap">
       <div className="brand-mark">C<span>.</span></div>
-      <span className="eyebrow">WELCOME BACK</span>
+      <Link href="/" className="home-signin">← Back to homepage</Link><span className="eyebrow">WELCOME BACK</span>
       <h2>Sign in to your workspace</h2>
       <p className="muted">Secure access to your organisation's financial records.</p>
       <form onSubmit={submit} className="stack-18">
