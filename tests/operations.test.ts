@@ -83,7 +83,7 @@ test("phases 1-4: organisations, invoicing, banking, reporting, controls and per
   await c.query("ROLLBACK TO SAVEPOINT blocked_period");
   await c.query("COMMIT");
   await c.query("BEGIN");await ctx(c,b.user,b.org);
-  for(const table of ["contacts","invoices","financial_periods","budgets","bank_transactions","audit_engagements","audit_controls","audit_tests","remediation_actions","invoice_allocations","audit_evidence","audit_reports"]){
+  for(const table of ["contacts","invoices","financial_periods","budgets","bank_transactions","audit_engagements","audit_controls","audit_tests","remediation_actions","invoice_allocations","audit_evidence","audit_reports","saved_reports"]){
    const q=await c.query("SELECT count(*)::int AS count FROM "+table+" WHERE tenant_id=$1",[a.org]);
    assert.equal(q.rows[0].count,0,"RLS leaked "+table);
   }

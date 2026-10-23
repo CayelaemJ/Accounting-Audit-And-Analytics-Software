@@ -150,6 +150,7 @@ export default function Workbench({role,userEmail,isAdmin=false}:{role:string;us
           <span className="nav-icon">{item.symbol}</span>{item.label}
         </button>)}
         <a className="nav-button" href="/operations"><span className="nav-icon">▣</span> Financial operations</a>
+        <a className="nav-button" href="/saved-reports"><span className="nav-icon">▤</span> Saved reports</a>
         <a className="nav-button" href="/insights"><span className="nav-icon">↗</span> Scenario intelligence</a>
         <a className="nav-button" href="/assistant"><span className="nav-icon">✦</span> AI Financial Analyst</a>
       </nav>
