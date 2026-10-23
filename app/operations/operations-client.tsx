@@ -101,6 +101,14 @@ export default function OperationsClient(){
         </form>
       </div>
       <div className="panel"><h3>Post sales or purchase invoice</h3><p className="form-note">Posts a balanced journal immediately. No VAT is calculated automatically; enter an explicitly verified tax amount, or zero.</p>
+        {canManage&&<button type="button" className="button" style={{marginBottom:16}} disabled={working} onClick={()=>void (async()=>{
+         setWorking(true);setError("");setMessage("");
+         try{const res=await fetch("/api/operations/tax-accounts",{method:"POST"});
+          const data=await res.json();if(!res.ok)throw Error(data.error||"VAT account setup failed");
+          setMessage("VAT control accounts are available. Verify tax treatment with your finance practitioner.");await refresh();
+         }catch(err){setError((err as Error).message);}finally{setWorking(false);}
+        })()}>Configure VAT ledger accounts</button>}
+
         <form className="stack-18" onSubmit={e=>void submit(e,"/api/operations/invoices",d=>({...d,
           idempotencyKey:crypto.randomUUID()}))}>
           <div className="grid-2">
