@@ -151,6 +151,7 @@ export default function Workbench({role,userEmail,isAdmin=false}:{role:string;us
         </button>)}
         <a className="nav-button" href="/operations"><span className="nav-icon">▣</span> Financial operations</a>
         <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
+        <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
         <a className="nav-button" href="/reversals"><span className="nav-icon">⇄</span> Journal reversals</a>
         <a className="nav-button" href="/security"><span className="nav-icon">♢</span> Account security</a>
         <a className="nav-button" href="/billing"><span className="nav-icon">◉</span> Subscription & usage</a>
