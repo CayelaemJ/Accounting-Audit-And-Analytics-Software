@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 type Org={id:string;name:string;slug:string;members:number;created_at:string};
-type Data={summary:{organisations:number;users:number;journals:number;unresolved_findings:number};
+type Data={summary:{organisations:number;users:number;active_memberships:number;platform_administrators:number};
  organisations:Org[];refreshedAt:string};
 export default function AdminWorkspace(){
  const [data,setData]=useState<Data|null>(null),[error,setError]=useState("");
@@ -19,7 +19,7 @@ export default function AdminWorkspace(){
    <h1>Superadmin overview</h1><p>Organisation administration, with financial records remaining tenant-isolated.</p></div></div>
   {error&&<div className="error-message">{error}</div>}
   <div className="kpi-grid">
-   {[["Organisations",k?.organisations],["Users",k?.users],["Posted journals",k?.journals],["Unresolved findings",k?.unresolved_findings]]
+   {[["Organisations",k?.organisations],["Users",k?.users],["Active memberships",k?.active_memberships],["Platform administrators",k?.platform_administrators]]
     .map(([n,v])=><div className="kpi" key={String(n)}><span className="kpi-label">{n}</span><div className="kpi-value">{v??"—"}</div></div>)}
   </div>
   <div className="panel" style={{marginTop:24}}><div className="panel-header"><h3>Organisation directory</h3><span>{data?.organisations.length??0} shown</span></div>
