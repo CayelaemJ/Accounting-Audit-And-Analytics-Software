@@ -70,6 +70,28 @@ r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"po
 assert.equal(r.status,201,"Post recurring journal");const recurringJournalId=r.result.journalId;
 r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"post",templateId,postingDate:current}});
 assert.equal(r.status,200,"Idempotent recurring retry");assert.equal(r.result.journalId,recurringJournalId);
+r=await request("/api/operations/banking",{method:"POST",cookie,body:{
+ action:"import",bankAccountId:cash.id,
+ rows:[{bookedOn:current,description:"CI recurring payment deposit",signedAmount:"20.00",sourceRef:"SMOKE-"+randomUUID()}]
+}});
+assert.equal(r.status,201,"Bank statement upload must succeed");
+assert.equal(r.result.imported,1,"Bank statement imports exactly one row");
+r=await request("/api/operations/bank-suggestions",{cookie});
+assert.equal(r.status,200,"Bank matching proposals are authenticated and readable");
+const suggested=r.result.suggestions.find(x=>x.candidates.some(y=>y.journalId===recurringJournalId));
+assert.ok(suggested,"Posted recurring journal should be offered as an exact suggestion");
+r=await request("/api/operations/banking",{method:"POST",cookie,body:{
+ action:"match",bankTransactionId:suggested.bankTransactionId,journalId:recurringJournalId
+}});
+assert.equal(r.status,200,"Confirm exact bank reconciliation: "+JSON.stringify(r.result));
+assert.equal(r.result.matched,true);
+r=await request("/api/operations/bank-suggestions",{cookie});
+assert.equal(r.status,200);
+assert.ok(!r.result.suggestions.some(x=>x.bankTransactionId===suggested.bankTransactionId),
+ "Reconciled bank transaction should no longer be offered");
+assert.equal(r.result.summary.matched,1);
+r=await request("/api/operations/bank-suggestions");
+assert.equal(r.status,401,"Bank reconciliation candidates are not public");
 r=await request("/api/audit-trail",{cookie});
 assert.equal(r.status,200,"Tenant-scoped audit trail");
 assert.ok(r.result.events.some(x=>x.action==="journal.posted"),"Audit trail records posted journal provenance");
