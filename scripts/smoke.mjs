@@ -34,6 +34,19 @@ r=await request("/api/operations/invoices",{method:"POST",cookie,body:{
 assert.equal(r.status,201,"Invoice posting must be atomic");
 r=await request("/api/overview",{cookie});
 assert.equal(r.status,200);assert.equal(r.result.totals.revenue,"100.00","Actual posted revenue");
+const accountsBefore=(await request("/api/overview",{cookie})).result.accounts;
+const cash=accountsBefore.find(a=>a.code==="1000"),capital=accountsBefore.find(a=>a.code==="3000");
+const originalIdempotency=randomUUID();
+r=await request("/api/journals",{method:"POST",cookie,body:{entryDate:current,memo:"Testing reversible owner capital",idempotencyKey:originalIdempotency,
+ lines:[{accountId:cash.id,side:"debit",amount:"15.50"},{accountId:capital.id,side:"credit",amount:"15.50"}]}});
+assert.equal(r.status,201,"Standalone journal posting");
+const postedId=r.result.id;
+r=await request("/api/journals/reverse",{method:"POST",cookie,body:{journalId:postedId,reason:"Correction of duplicate source entry",entryDate:current}});
+assert.equal(r.status,201,"Immutable reversal journal");
+r=await request("/api/journals/reverse",{method:"POST",cookie,body:{journalId:postedId,reason:"Second reversal attempt must fail",entryDate:current}});
+assert.equal(r.status,409,"Duplicate reversal blocked");
+r=await request("/api/overview",{cookie});
+assert.equal(r.result.totals.revenue,"100.00","Reversal must not change unrelated revenue");
 r=await request("/api/reports/saved",{method:"POST",cookie,body:{name:"CI trial balance",template:"trial_balance"}});
 assert.equal(r.status,201,"Create saved report definition");const reportId=r.result.report.id;
 r=await request("/api/reports/saved/"+reportId,{cookie});assert.equal(r.status,200);
