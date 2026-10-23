@@ -196,7 +196,7 @@ export default function OperationsClient(){
        <button className="button primary" disabled={working}>Import statement transactions</button>
      </form>
      <p className="form-note" style={{marginTop:12}}>No direct access to your bank account is requested. The bank's source account is shown by its last four digits after import; this release does not automatically verify the selected ledger account against a bank registry.</p>
-   </section>
+   </section>}
    {canWrite&&<div className="content-grid">
     <section className="panel"><h3>Import bank statement CSV</h3>
      <label>Load CSV file<input type="file" accept=".csv,text/csv" onChange={e=>{
