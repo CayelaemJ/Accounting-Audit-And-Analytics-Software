@@ -1,0 +1,29 @@
+version: 2.1
+
+jobs:
+  security_and_tests:
+    docker:
+      - image: cimg/node:22.16
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm install --no-audit --no-fund
+      - run:
+          name: Audit production dependencies
+          command: npm audit --omit=dev --audit-level=high
+      - run:
+          name: Typecheck
+          command: npm run typecheck
+      - run:
+          name: Security and financial accounting unit tests
+          command: npm test
+      - run:
+          name: Verify application build
+          command: npm run build
+
+workflows:
+  verify_pull_requests:
+    jobs:
+      - security_and_tests
