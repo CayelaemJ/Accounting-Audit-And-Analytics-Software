@@ -28,7 +28,7 @@ let r=await request("/api/auth/register",{method:"POST",body:{email,password,org
 assert.equal(r.status,201,"Registration must persist organisation, accounts and session");
 const cookie=r.cookie;assert.ok(cookie?.startsWith("cabo_session="),"Session cookie not set");
 r=await request("/api/overview",{cookie});assert.equal(r.status,200,"Authenticated overview");
-assert.equal(r.result.accounts.length,6,"Default chart of accounts");
+assert.equal(r.result.accounts.length,8,"Default chart of accounts, including VAT controls");
 const unauthorized=await request("/api/admin/overview",{cookie});
 assert.equal(unauthorized.status,403,"Tenant owner must not automatically become platform admin");
 r=await request("/api/operations/contacts",{method:"POST",cookie,body:{name:"Smoke Customer",kind:"customer"}});
@@ -65,6 +65,16 @@ r=await request("/api/audit-trail",{cookie});
 assert.equal(r.status,200,"Tenant-scoped audit trail");
 assert.ok(r.result.events.some(x=>x.action==="journal.posted"),"Audit trail records posted journal provenance");
 const publicAudit=await request("/api/audit-trail");assert.equal(publicAudit.status,401,"No public audit event access");
+r=await request("/api/operations/tax-accounts",{method:"POST",cookie});
+assert.equal(r.status,200,"VAT account provisioner is idempotent for new organisations");
+r=await request("/api/operations/invoices",{method:"POST",cookie,body:{
+ kind:"sales",contactId,reference:"VAT-INV-"+randomUUID().slice(0,8),
+ invoiceDate:current,dueDate:current,netAmount:"100.00",taxAmount:"15.00",idempotencyKey:randomUUID()
+}});
+assert.equal(r.status,201,"VAT-valued invoice posting");
+r=await request("/api/overview",{cookie});
+assert.equal(r.result.totals.revenue,"200.00","Revenue excludes separately credited output VAT");
+assert.equal(r.result.totals.liabilities,"15.00","Output VAT credited to its liability account");
 r=await request("/api/reports/saved",{method:"POST",cookie,body:{name:"CI trial balance",template:"trial_balance"}});
 assert.equal(r.status,201,"Create saved report definition");const reportId=r.result.report.id;
 r=await request("/api/reports/saved/"+reportId,{cookie});assert.equal(r.status,200);
