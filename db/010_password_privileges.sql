@@ -1,0 +1,3 @@
+-- Deployment DBA must grant narrow password update authority to the application runtime.
+-- Do not grant UPDATE on platform_admins or all users columns.
+-- Local self-owned migration grants are applied in CI setup where applicable.
