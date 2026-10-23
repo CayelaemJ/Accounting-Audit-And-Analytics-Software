@@ -7,7 +7,7 @@ export async function GET(){
  try{
  const user=await currentSession();if(!user)return jsonError("Sign in required.",401);
  const report=await tenantTx(user,async c=>{
- const [periods,contacts,invoices,banks,balances,monthly,budgets,engagements,controls,tests,actions,evidence,reviews]=await Promise.all([
+ const [periods,contacts,invoices,banks,balances,monthly,budgets,engagements,controls,tests,actions,evidence,reviews,statement]=await Promise.all([
  c.query("SELECT id,label,start_date,end_date,status FROM financial_periods WHERE tenant_id=$1 ORDER BY start_date DESC LIMIT 30",[user.tenantId]),
  c.query("SELECT id,name,kind,email FROM contacts WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 100",[user.tenantId]),
  c.query(`SELECT i.id,i.kind,i.reference,i.invoice_date,i.due_date,i.net_amount::text,i.tax_amount::text,i.total_amount::text,
@@ -37,11 +37,19 @@ export async function GET(){
  c.query("SELECT t.id,t.result,t.notes,t.tested_at,c.code FROM audit_tests t JOIN audit_controls c ON c.id=t.control_id AND c.tenant_id=t.tenant_id WHERE t.tenant_id=$1 ORDER BY t.tested_at DESC LIMIT 100",[user.tenantId]),
  c.query("SELECT a.id,a.finding_id,a.description,a.due_date,a.status FROM remediation_actions a WHERE a.tenant_id=$1 ORDER BY a.due_date LIMIT 100",[user.tenantId]),
  c.query("SELECT e.id,e.title,e.source_ref,e.notes,e.evidence_sha256,e.created_at FROM audit_evidence e WHERE e.tenant_id=$1 ORDER BY e.created_at DESC LIMIT 100",[user.tenantId]),
- c.query("SELECT r.id,r.title,r.body,r.status,r.prepared_by,r.approved_by FROM audit_reports r WHERE r.tenant_id=$1 ORDER BY r.created_at DESC LIMIT 100",[user.tenantId])
+ c.query("SELECT r.id,r.title,r.body,r.status,r.prepared_by,r.approved_by FROM audit_reports r WHERE r.tenant_id=$1 ORDER BY r.created_at DESC LIMIT 100",[user.tenantId]),
+ c.query(`SELECT
+ coalesce(sum(CASE WHEN a.type='revenue' THEN l.credit-l.debit ELSE 0 END),0)::text AS revenue,
+ coalesce(sum(CASE WHEN a.type='expense' THEN l.debit-l.credit ELSE 0 END),0)::text AS expenses,
+ coalesce(sum(CASE WHEN a.type='asset' THEN l.debit-l.credit ELSE 0 END),0)::text AS assets,
+ coalesce(sum(CASE WHEN a.type='liability' THEN l.credit-l.debit ELSE 0 END),0)::text AS liabilities,
+ coalesce(sum(CASE WHEN a.type='equity' THEN l.credit-l.debit ELSE 0 END),0)::text AS equity
+ FROM journal_lines l JOIN accounts a ON a.id=l.account_id AND a.tenant_id=l.tenant_id
+ WHERE l.tenant_id=$1`,[user.tenantId])
  ]);
  return {periods:periods.rows,contacts:contacts.rows,invoices:invoices.rows,bankTransactions:banks.rows,
  trialBalance:balances.rows,monthlyActuals:monthly.rows,budgets:budgets.rows,
- engagements:engagements.rows,controls:controls.rows,controlTests:tests.rows,actions:actions.rows,evidence:evidence.rows,auditReports:reviews.rows,
+ engagements:engagements.rows,controls:controls.rows,controlTests:tests.rows,actions:actions.rows,evidence:evidence.rows,auditReports:reviews.rows,statement:statement.rows[0],
  note:"Cumulative ledger net balances. Period-close and VAT statements require professional review.",refreshedAt:new Date().toISOString()};
  });
  return NextResponse.json(report,{headers:{"Cache-Control":"no-store"}});
