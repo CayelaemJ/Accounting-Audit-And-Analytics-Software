@@ -42,7 +42,7 @@ r=await request("/api/journals",{method:"POST",cookie,body:{entryDate:current,me
 assert.equal(r.status,201,"Standalone journal posting");
 const postedId=r.result.id;
 r=await request("/api/journals/reverse",{method:"POST",cookie,body:{journalId:postedId,reason:"Correction of duplicate source entry",entryDate:current}});
-assert.equal(r.status,201,"Immutable reversal journal");
+assert.equal(r.status,201,"Immutable reversal journal: "+JSON.stringify(r.result));
 r=await request("/api/journals/reverse",{method:"POST",cookie,body:{journalId:postedId,reason:"Second reversal attempt must fail",entryDate:current}});
 assert.equal(r.status,409,"Duplicate reversal blocked");
 r=await request("/api/overview",{cookie});
