@@ -14,7 +14,9 @@ const schema = z.object({
 const defaultAccounts = [
   ["1000","Cash and bank","asset"],
   ["1100","Accounts receivable","asset"],
+  ["1200","Input VAT","asset"],
   ["2000","Accounts payable","liability"],
+  ["2100","Output VAT","liability"],
   ["3000","Owner's equity","equity"],
   ["4000","Sales revenue","revenue"],
   ["5000","Operating expenses","expense"]
