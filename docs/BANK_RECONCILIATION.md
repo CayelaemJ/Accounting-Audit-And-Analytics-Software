@@ -23,3 +23,13 @@ The dashboard summarises imported, matched and unmatched items and the **net sig
 - All payment and bank feeds require formal provider access, consent and security review before connection.
 
 Do not promote staging to production without independent finance controls, recovery drills, audit review and credential rotations.
+
+## Bank OFX/QFX document imports
+
+An authorised finance user can now upload a bank-generated OFX/QFX statement from **Financial operations → Bank reconciliation**. The server parses and validates the document, checks the ledger account and tenant currency, verifies booking dates and signed decimal amounts, and saves no more than 250 transaction entries per 512-KB file in one atomic database transaction. The importer refuses document type declarations and external entities.
+
+- The source's `FITID` is hashed to form a stable account-scoped deduplication identifier. Repeated statement imports do not double count bank transactions.
+- A repeated transaction ID with a changed amount or booking date is rejected rather than silently overwriting bank data.
+- The user must select the relevant ledger asset account. The source account's last four digits are returned for review, **but there is not yet a verified mapping to an actual bank account registry**.
+- Imports stage bank transactions only; they **do not** create journal entries or mark transactions reconciled. Users must still review suggested matches and approve them.
+- Live bank APIs and unattended scheduled feed collection remain unconnected and will require bank-specific credentials, consent, and a secure webhook/polling contract.

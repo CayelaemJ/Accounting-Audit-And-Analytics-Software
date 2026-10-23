@@ -42,6 +42,8 @@ export async function POST(req:NextRequest){
    const company=await c.query("SELECT currency FROM tenants WHERE id=$1",[session.tenantId]);
    if(statement.currency&&statement.currency!==company.rows[0]?.currency)
     throw Error("Statement currency does not match your organisation.");
+   await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+     [session.tenantId+":"+accountId+":ofx-import"]);
    let imported=0,duplicates=0;
    for(const row of statement.transactions){
     const existing=await c.query(`SELECT booked_on,signed_amount::text FROM bank_transactions
