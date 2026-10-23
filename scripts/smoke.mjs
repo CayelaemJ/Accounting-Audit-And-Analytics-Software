@@ -101,9 +101,10 @@ VERSION:102
 <BANKTRANLIST><STMTTRN><DTPOSTED>${current.replaceAll("-","")}120000
 <TRNAMT>-12.34<FITID>${fitid}<NAME>Monthly bank fee</STMTTRN></BANKTRANLIST>
 </STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`;
-async function ofxUpload(){
+async function ofxUpload(bankAccountId=cash.id,expectedLast4="1234"){
  const form=new FormData();
- form.set("bankAccountId",cash.id);
+ form.set("bankAccountId",bankAccountId);
+ form.set("expectedLast4",expectedLast4);
  form.set("statement",new Blob([ofx],{type:"application/octet-stream"}),"smoke-statement.ofx");
  const response=await fetch(base+"/api/operations/statements/import",{
   method:"POST",headers:{Origin:base,Cookie:cookie},body:form
@@ -111,10 +112,15 @@ async function ofxUpload(){
  const body=await response.json();
  return {status:response.status,result:body};
 }
+const unconfirmed=await ofxUpload(cash.id,"9999");
+assert.equal(unconfirmed.status,422,"Bank account confirmation must match the statement");
 const firstOfx=await ofxUpload();
 assert.equal(firstOfx.status,200,"OFX statement upload: "+JSON.stringify(firstOfx.result));
 assert.equal(firstOfx.result.imported,1,"One new bank entry must be recorded");
 assert.equal(firstOfx.result.statementAccountLast4,"1234");
+const misbound=await ofxUpload(accountsBefore.find(a=>a.code==="1100").id,"1234");
+assert.equal(misbound.status,422,"Existing statement source may not be imported to another ledger account");
+
 const secondOfx=await ofxUpload();
 assert.equal(secondOfx.status,200,"Reimported statement should be safely idempotent");
 assert.equal(secondOfx.result.duplicates,1);

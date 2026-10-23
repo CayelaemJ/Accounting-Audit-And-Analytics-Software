@@ -33,3 +33,13 @@ An authorised finance user can now upload a bank-generated OFX/QFX statement fro
 - The user must select the relevant ledger asset account. The source account's last four digits are returned for review, **but there is not yet a verified mapping to an actual bank account registry**.
 - Imports stage bank transactions only; they **do not** create journal entries or mark transactions reconciled. Users must still review suggested matches and approve them.
 - Live bank APIs and unattended scheduled feed collection remain unconnected and will require bank-specific credentials, consent, and a secure webhook/polling contract.
+
+## User-confirmed bank-source binding
+
+New OFX imports now require the last four characters of the source account shown on the bank statement. Only an organisation owner or finance manager may create its first source-to-asset-ledger binding. The server calculates a keyed HMAC-SHA-256 fingerprint of the organisation, bank institution identifier and statement account identifier; it stores the fingerprint and masked last-four suffix only, never the raw bank account identifier.
+
+The binding is immutable within the application. Imports that attempt to use an already-bound statement source with a different asset account, or a bound ledger asset with a different source, are rejected. An accountant may import additional statements once an owner or finance manager has bound that source.
+
+**Required configuration:** Set `BANK_SOURCE_HMAC_KEY` to a unique, cryptographically random 32-byte key encoded as 64 hexadecimal characters on the application service. Use the test-only key in CI, never in a hosted environment. Changes to this key invalidate prior source fingerprints; establish a planned audited rebinding process before any rotation.
+
+**Scope:** These are *user-confirmed* statement-to-ledger bindings, not independently verified connections with a financial institution. A bank provider API integration, bank-specific account metadata verification, and documented reconnection workflow are still required before describing the integration as bank-verified.

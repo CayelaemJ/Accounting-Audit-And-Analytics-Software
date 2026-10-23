@@ -4,6 +4,7 @@ import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
 import {jsonError,requireSameOrigin,limit,unexpected} from "@/lib/http";
 import {parseOFX} from "@/lib/bank-ofx";
+import {bankSourceFingerprint,verifyStatementLast4} from "@/lib/bank-source";
 export const runtime="nodejs";
 const LIMIT=512_000;
 export async function POST(req:NextRequest){
@@ -19,6 +20,7 @@ export async function POST(req:NextRequest){
    return jsonError("Upload must include Content-Length and be at most 512 KB.",413);
   const form=await req.formData();
   const accountId=form.get("bankAccountId");
+  const expectedLast4=form.get("expectedLast4");
   const file=form.get("statement");
   if(typeof accountId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId))
    return jsonError("Choose your authorised bank ledger account.");
@@ -35,6 +37,12 @@ export async function POST(req:NextRequest){
   const future=new Date().toISOString().slice(0,10);
   if(statement.transactions.some(row=>row.bookedOn>future))
    return jsonError("Statement contains future-dated bank transactions.");
+  if(typeof expectedLast4!=="string"||!verifyStatementLast4(expectedLast4,statement.accountLast4))
+   return jsonError("Account confirmation does not match the bank statement's final four characters.",422);
+  const secret=process.env.BANK_SOURCE_HMAC_KEY||"";
+  if(!/^[0-9a-fA-F]{64}$/.test(secret))
+   return jsonError("Secure bank-source registration is temporarily unavailable.",503);
+  const sourceFingerprint=bankSourceFingerprint(secret,session.tenantId,statement.sourceBankId,statement.sourceAccountId);
   const result=await tenantTx(session,async c=>{
    const bank=await c.query("SELECT id FROM accounts WHERE tenant_id=$1 AND id=$2 AND type='asset'",
      [session.tenantId,accountId]);
@@ -42,8 +50,29 @@ export async function POST(req:NextRequest){
    const company=await c.query("SELECT currency FROM tenants WHERE id=$1",[session.tenantId]);
    if(statement.currency&&statement.currency!==company.rows[0]?.currency)
     throw Error("Statement currency does not match your organisation.");
+   // Lock the source first: two simultaneous attempts cannot bind one bank account
+   // to different ledger assets.
+   await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+     [session.tenantId+":"+sourceFingerprint+":source"]);
    await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
      [session.tenantId+":"+accountId+":ofx-import"]);
+   const sources=await c.query(`SELECT bank_account_id,source_fingerprint FROM bank_statement_sources
+     WHERE tenant_id=$1 AND (bank_account_id=$2 OR source_fingerprint=$3)`,
+     [session.tenantId,accountId,sourceFingerprint]);
+   if(sources.rows.length){
+    if(sources.rows.length!==1||sources.rows[0].bank_account_id!==accountId
+       ||sources.rows[0].source_fingerprint!==sourceFingerprint)
+     throw Error("This bank source is already bound to a different ledger account, or the selected account is bound to another bank source.");
+   }else{
+    if(!["owner","finance_manager"].includes(session.role))
+     throw Error("An owner or finance manager must verify and register this bank source first.");
+    await c.query(`INSERT INTO bank_statement_sources
+      (tenant_id,bank_account_id,source_fingerprint,account_last4,currency,bound_by)
+      VALUES($1,$2,$3,$4,$5,$6)`,
+     [session.tenantId,accountId,sourceFingerprint,statement.accountLast4,
+      company.rows[0].currency,session.userId]);
+   }
+
    let imported=0,duplicates=0;
    for(const row of statement.transactions){
     const existing=await c.query(`SELECT booked_on,signed_amount::text FROM bank_transactions
@@ -72,8 +101,8 @@ export async function POST(req:NextRequest){
   return NextResponse.json({...result,format:"OFX",notice:"Statement entries have been staged. Review the ledger bank account and reconcile manually. No financial journal has been automatically created."},
     {status:200,headers:{"Cache-Control":"no-store"}});
  }catch(error){
-  if(error instanceof Error&&/Bank account does not belong|Statement currency does not match|conflicts with the imported/.test(error.message))
-   return jsonError(error.message,422);
+  if(error instanceof Error&&/Bank account does not belong|Statement currency does not match|conflicts with the imported|already bound|must verify and register/.test(error.message))
+   return jsonError(error.message,error.message.includes("owner or finance manager")?403:422);
   return unexpected(error);
  }
 }

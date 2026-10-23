@@ -6,7 +6,7 @@ export type OFXTransaction={
  bookedOn:string;description:string;signedAmount:string;sourceRef:string;sourceHash:string
 };
 export type OFXStatement={
- accountLast4:string;currency:string|null;transactions:OFXTransaction[]
+ accountLast4:string;sourceAccountId:string;sourceBankId:string;currency:string|null;transactions:OFXTransaction[]
 };
 const TRANSACTION_LIMIT=250;
 const OFX_MAX_CHARS=512_000;
@@ -49,7 +49,11 @@ export function parseOFX(input:string):OFXStatement{
  // Reject credit card statements explicitly; asset bank reconciliation isn't credit card posting.
  if(/<CCACCTFROM\b/i.test(input))throw Error("Credit card statements require a separate import");
  const bankAccount=tag(input,"ACCTID");
- if(!bankAccount||bankAccount.length>80)throw Error("Missing bank account identifier");
+ const bankId=tag(input,"BANKID")||"";
+ if(!bankAccount||!/^[A-Za-z0-9._-]{4,80}$/.test(bankAccount))
+   throw Error("Missing or invalid bank account identifier");
+ if(!/^[A-Za-z0-9._-]{0,40}$/.test(bankId))
+   throw Error("Invalid bank institution identifier");
  const currency=tag(input,"CURDEF");
  if(currency&&(!/^[A-Z]{3}$/.test(currency)))throw Error("Invalid statement currency");
  const entries=[...input.matchAll(/<STMTTRN(?:\s[^>]*)?>([\s\S]*?)<\/STMTTRN\s*>/gi)];
@@ -74,5 +78,5 @@ export function parseOFX(input:string):OFXStatement{
   seen.set(hash,identity);
   transactions.push({bookedOn,description,signedAmount,sourceRef:"OFX:"+fitid,sourceHash:hash});
  }
- return {accountLast4:bankAccount.slice(-4),currency:currency||null,transactions};
+ return {accountLast4:bankAccount.slice(-4),sourceAccountId:bankAccount,sourceBankId:bankId,currency:currency||null,transactions};
 }

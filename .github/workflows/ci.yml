@@ -23,6 +23,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://cabo_app:dev-test-password@127.0.0.1:5432/cabo_test
+      BANK_SOURCE_HMAC_KEY: "abababababababababababababababababababababababababababababababab" # fixed test-only fixture, never use in production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
