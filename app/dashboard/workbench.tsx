@@ -42,7 +42,7 @@ async function api(path:string, method:"POST"|"PATCH",payload:unknown) {
   if (!response.ok) throw new Error(result.error || "Request failed");
   return result;
 }
-export default function Workbench({role,userEmail}:{role:string;userEmail:string}) {
+export default function Workbench({role,userEmail,isAdmin=false}:{role:string;userEmail:string;isAdmin?:boolean}) {
   const [data,setData] = useState<Overview|null>(null);
   const [view,setView] = useState<View>("overview");
   const [busy,setBusy] = useState(false);
@@ -150,8 +150,10 @@ export default function Workbench({role,userEmail}:{role:string;userEmail:string
           <span className="nav-icon">{item.symbol}</span>{item.label}
         </button>)}
         <a className="nav-button" href="/operations"><span className="nav-icon">▣</span> Financial operations</a>
+        <a className="nav-button" href="/insights"><span className="nav-icon">↗</span> Scenario intelligence</a>
         <a className="nav-button" href="/assistant"><span className="nav-icon">✦</span> AI Financial Analyst</a>
       </nav>
+      {isAdmin&&<a className="nav-button" href="/admin"><span className="nav-icon">◆</span> Platform administration</a>}
       <div className="sidebar-footer">
         <div style={{fontWeight:700}}>{userEmail}</div><small>Role: {role.replaceAll("_"," ")}</small>
         <button className="button quiet" onClick={()=>void signOut()} disabled={busy}>Sign out ↗</button>
