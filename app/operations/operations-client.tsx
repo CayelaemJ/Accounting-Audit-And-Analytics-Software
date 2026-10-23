@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 type R=Record<string,any>;
-type Report={contacts:R[];invoices:R[];bankTransactions:R[];periods:R[];budgets:R[];
+type Report={contacts:R[];invoices:R[];bankTransactions:R[];periods:R[];budgets:R[];evidence:R[];auditReports:R[];
  trialBalance:R[];monthlyActuals:R[];engagements:R[];controls:R[];controlTests:R[];actions:R[];refreshedAt:string};
 type Overview={accounts:R[];entries:R[];findings:R[];tenant:{name:string;currency:string};role:string};
 type Monitor={observations:R[];refreshedAt:string};
@@ -116,11 +116,21 @@ export default function OperationsClient(){
         </form></div>
      </div>}
     <div className="content-grid">
-      <section className="panel"><div className="panel-header"><h3>Posted invoices</h3><span>{report.invoices.length} recent</span></div>
+      {canWrite&&<section className="panel" style={{marginBottom:18}}>
+ <div className="panel-header"><h3>Allocate an invoice payment</h3><span>Creates a journal and updates outstanding balances</span></div>
+ <form className="grid-3" onSubmit={e=>void submit(e,"/api/operations/payments",d=>({...d,idempotencyKey:crypto.randomUUID()}))}>
+ <label>Unpaid invoice<select name="invoiceId" required><option value="">Choose invoice</option>{report.invoices.filter(x=>Number(x.outstanding_amount)>0).map(x=><option key={x.id} value={x.id}>{x.reference} ({x.outstanding_amount})</option>)}</select></label>
+ <label>Cash asset account<select name="cashAccountId" required><option value="">Choose asset account</option>{bankAccounts.map(x=><option key={x.id} value={x.id}>{x.code} — {x.name}</option>)}</select></label>
+ <label>Amount<input name="amount" placeholder="100.00" required/></label>
+ <label>Payment date<input name="paymentDate" type="date" required defaultValue={new Date().toISOString().slice(0,10)}/></label>
+ <div style={{alignSelf:"end"}}><button className="button primary" disabled={working}>Post payment</button></div>
+ </form></section>}
+ <section className="panel"><div className="panel-header"><h3>Posted invoices</h3><span>{report.invoices.length} recent</span></div>
        {report.invoices.length===0?<div className="empty">No invoices yet</div>:
        <div className="table-wrap"><table><thead><tr><th>Reference</th><th>Contact</th><th>Type</th><th>Due</th><th className="right">Total</th></tr></thead><tbody>
        {report.invoices.map(x=><tr key={x.id}><td>{x.reference}</td><td>{x.contact_name}</td><td>{x.kind}</td><td>{date(x.due_date)}</td>
-       <td className="right mono">{money(x.total_amount,overview.tenant.currency)}</td></tr>)}</tbody></table></div>}
+       <td className="right mono">{money(x.total_amount,overview.tenant.currency)}
+ <p className="form-note">Outstanding: {money(x.outstanding_amount,overview.tenant.currency)}</p></td></tr>)}</tbody></table></div>}
       </section>
       <section className="panel"><h3>Contacts</h3>{report.contacts.map(x=><div className="audit-item" key={x.id}>{x.name}<span className="pill">{x.kind}</span></div>)}
        {!report.contacts.length&&<div className="empty">No contacts yet</div>}</section>
@@ -260,7 +270,7 @@ export default function OperationsClient(){
      </tbody></table></div></section>
   </>}
   {tab==="exceptions"&&<>
-    <div className="notice">These are rule-based investigation signals, not proof of fraud. Invoice payment allocation isn't yet tracked, so past-due invoices do not necessarily represent unpaid debt.</div>
+    <div className="notice">These are rule-based investigation signals, not proof of fraud. Overdue invoices reflect allocated payments. Confirm bank receipts and credit notes before action.</div>
     <section className="panel"><div className="panel-header"><h3>Continuous exception monitoring</h3><span>{monitor?.observations.length||0} signals · refreshed every 30 seconds</span></div>
      {!monitor?.observations.length?<div className="empty">No current exceptions detected by the implemented rules.</div>:
       <div className="table-wrap"><table><thead><tr><th>Rule</th><th>Severity</th><th>Observation</th></tr></thead>
