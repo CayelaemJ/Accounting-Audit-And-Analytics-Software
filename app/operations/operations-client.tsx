@@ -244,6 +244,45 @@ export default function OperationsClient(){
        <label>Due date<input type="date" name="dueDate" required/></label>
        <button className="button primary" disabled={working}>Create corrective action</button></form></section>
     </div>}
+    {canAudit&&<div className="content-grid">
+     <section className="panel"><h3>Record evidence reference</h3>
+       <p className="form-note">Records evidence provenance and a SHA-256 fingerprint. This screen does not upload original files.</p>
+       <form className="stack-18" onSubmit={e=>void submit(e,"/api/operations/evidence",d=>({...d,action:"evidence"}))}>
+       <label>Engagement<select required name="engagementId"><option value="">Select engagement</option>{report.engagements.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
+       <label>Evidence title<input required name="title" minLength={5}/></label>
+       <label>Source reference<input required name="sourceRef" minLength={3}/></label>
+       <label>Notes<textarea name="notes" rows={3}/></label>
+       <button className="button primary" disabled={working}>Record evidence</button></form>
+     </section>
+     <section className="panel"><h3>Draft audit report</h3>
+      <form className="stack-18" onSubmit={e=>void submit(e,"/api/operations/evidence",d=>({...d,action:"report"}))}>
+       <label>Engagement<select required name="engagementId"><option value="">Select engagement</option>{report.engagements.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
+       <label>Report title<input required name="title" minLength={5}/></label>
+       <label>Report and management response<textarea name="body" required minLength={20} rows={4}/></label>
+       <button className="button primary" disabled={working}>Save draft report</button></form>
+       <p className="form-note">A second authorised reviewer must approve; authors cannot approve their own reports.</p>
+     </section>
+    </div>}
+    <div className="content-grid">
+     <section className="panel"><h3>Evidence register</h3>
+      {!report.evidence.length&&<div className="empty">No evidence references recorded</div>}
+      {report.evidence.map(x=><div className="audit-item" key={x.id}>
+       <span>{x.title}<p className="form-note">{x.source_ref} · SHA-256: {x.evidence_sha256.slice(0,16)}…</p></span>
+      </div>)}
+     </section>
+     <section className="panel"><h3>Audit reports</h3>
+      {!report.auditReports.length&&<div className="empty">No audit report drafts</div>}
+      {report.auditReports.map(x=><div className="audit-item" key={x.id}>
+        <span>{x.title}<p className="form-note">{x.body.slice(0,120)}</p></span>
+        {x.status==="draft"&&canAudit?<button className="button" disabled={working} onClick={async()=>{
+          setWorking(true);setError("");
+          try{const response=await fetch("/api/operations/evidence",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"approve",reportId:x.id})});
+          const body=await response.json();if(!response.ok)throw new Error(body.error||"Approval failed");await refresh();
+          }catch(error){setError((error as Error).message);}finally{setWorking(false);}
+        }}>Approve</button>:<span className="pill resolved">{x.status}</span>}
+      </div>)}
+     </section>
+    </div>
     <div className="content-grid">
      <section className="panel"><h3>Audit engagements</h3>{report.engagements.map(x=><div className="audit-item" key={x.id}><span>{x.title}<p className="form-note">{x.objective}</p></span><span className="pill">{x.status}</span></div>)}</section>
      <section className="panel"><h3>Control test history</h3>{report.controlTests.map(x=><div className="audit-item" key={x.id}><span>{x.code}<p className="form-note">{x.notes}</p></span><span className={"pill "+(x.result==="fail"?"high":"")}>{x.result}</span></div>)}</section>
