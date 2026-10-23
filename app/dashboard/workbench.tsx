@@ -150,6 +150,7 @@ export default function Workbench({role,userEmail,isAdmin=false}:{role:string;us
           <span className="nav-icon">{item.symbol}</span>{item.label}
         </button>)}
         <a className="nav-button" href="/operations"><span className="nav-icon">▣</span> Financial operations</a>
+        <a className="nav-button" href="/audit-trail"><span className="nav-icon">◎</span> Activity audit trail</a>
         <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
         <a className="nav-button" href="/recurring"><span className="nav-icon">⟳</span> Recurring journals</a>
         <a className="nav-button" href="/reversals"><span className="nav-icon">⇄</span> Journal reversals</a>

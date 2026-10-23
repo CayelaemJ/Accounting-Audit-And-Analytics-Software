@@ -61,6 +61,10 @@ r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"po
 assert.equal(r.status,201,"Post recurring journal");const recurringJournalId=r.result.journalId;
 r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"post",templateId,postingDate:current}});
 assert.equal(r.status,200,"Idempotent recurring retry");assert.equal(r.result.journalId,recurringJournalId);
+r=await request("/api/audit-trail",{cookie});
+assert.equal(r.status,200,"Tenant-scoped audit trail");
+assert.ok(r.result.events.some(x=>x.action==="journal.posted"),"Audit trail records posted journal provenance");
+const publicAudit=await request("/api/audit-trail");assert.equal(publicAudit.status,401,"No public audit event access");
 r=await request("/api/reports/saved",{method:"POST",cookie,body:{name:"CI trial balance",template:"trial_balance"}});
 assert.equal(r.status,201,"Create saved report definition");const reportId=r.result.report.id;
 r=await request("/api/reports/saved/"+reportId,{cookie});assert.equal(r.status,200);
