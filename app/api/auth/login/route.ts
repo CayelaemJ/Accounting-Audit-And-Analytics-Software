@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pool, tx, setActor } from "@/lib/db";
 import { verifyPassword, issueSessionToken, saveSession, setSessionCookie } from "@/lib/auth";
 import { jsonError, requireSameOrigin, limit, unexpected } from "@/lib/http";
+import {loginAttemptKey} from "@/lib/login-abuse";
 
 export const runtime = "nodejs";
 const schema = z.object({
@@ -15,8 +16,8 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return jsonError("Invalid email or password.", 401);
     const { identifier, password } = parsed.data;
-    const ip = req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-    if (!(await limit("login:" + identifier + ":" + ip, 8))) return jsonError("Too many attempts. Please try again later.", 429);
+    // Limit by account, not caller-spoofable forwarding headers; the DB limiter is shared between instances.
+    if (!(await limit(loginAttemptKey(identifier), 8))) return jsonError("Too many attempts. Please try again later.", 429);
     const user = await pool().query("SELECT id,password_hash FROM users WHERE email=$1 OR username=$1 LIMIT 1",[identifier]);
     if (!user.rowCount || !(await verifyPassword(password,user.rows[0].password_hash))) return jsonError("Invalid email or password.", 401);
     const userId = user.rows[0].id as string;
