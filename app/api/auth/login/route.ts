@@ -5,16 +5,19 @@ import { verifyPassword, issueSessionToken, saveSession, setSessionCookie } from
 import { jsonError, requireSameOrigin, limit, unexpected } from "@/lib/http";
 
 export const runtime = "nodejs";
-const schema = z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1) });
+const schema = z.object({
+  identifier: z.string().trim().toLowerCase().min(3).max(180),
+  password: z.string().min(1).max(128)
+}).strict();
 export async function POST(req: NextRequest) {
   try {
     requireSameOrigin(req);
     const parsed = schema.safeParse(await req.json());
     if (!parsed.success) return jsonError("Invalid email or password.", 401);
-    const { email, password } = parsed.data;
+    const { identifier, password } = parsed.data;
     const ip = req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-    if (!(await limit("login:" + email + ":" + ip, 8))) return jsonError("Too many attempts. Please try again later.", 429);
-    const user = await pool().query("SELECT id,password_hash FROM users WHERE email=$1",[email]);
+    if (!(await limit("login:" + identifier + ":" + ip, 8))) return jsonError("Too many attempts. Please try again later.", 429);
+    const user = await pool().query("SELECT id,password_hash FROM users WHERE email=$1 OR username=$1 LIMIT 1",[identifier]);
     if (!user.rowCount || !(await verifyPassword(password,user.rows[0].password_hash))) return jsonError("Invalid email or password.", 401);
     const userId = user.rows[0].id as string;
     const token = issueSessionToken();
