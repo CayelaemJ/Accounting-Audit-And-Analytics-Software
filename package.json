@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/money.test.ts tests/forecast.test.ts",
     "test:db": "tsx --test tests/database.test.ts tests/operations.test.ts",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "test:http": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",

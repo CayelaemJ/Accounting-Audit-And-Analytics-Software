@@ -47,3 +47,9 @@ jobs:
         run: npm run test:db
       - name: Production Next.js build
         run: npm run build
+      - name: End-to-end HTTP and superadmin authentication smoke
+        run: |
+          PORT=3123 npm start > /tmp/cabo-next.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          npm run test:http || { tail -n 70 /tmp/cabo-next.log; exit 1; }
