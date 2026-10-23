@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       for (const [code,name,type] of defaultAccounts) {
         await client.query("INSERT INTO accounts(tenant_id,code,name,type) VALUES($1,$2,$3,$4)",[tenantId,code,name,type]);
       }
+      await client.query("INSERT INTO tenant_subscriptions(tenant_id,plan_code,status) VALUES($1,'evaluation','evaluation') ON CONFLICT DO NOTHING",[tenantId]);
       await saveSession(client,userId,tenantId,token);
     });
     await setSessionCookie(token);
