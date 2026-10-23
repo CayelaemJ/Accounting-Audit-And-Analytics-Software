@@ -173,6 +173,7 @@ export default function OperationsClient(){
   {tab==="banking"&&<>
    <div className="notice">Import your own CSV transactions and match each bank item to an existing journal with an equal, signed movement on the same asset account. This is manual statement reconciliation; no live bank feeds are connected.</div>
    <Link className="button primary" href="/bank-review" style={{marginBottom:18}}>Review suggested bank matches →</Link>
+   {canManage&&<Link className="button" href="/bank-feed" style={{marginBottom:18,marginLeft:8}}>Configure automated bank feeds →</Link>}
    {canWrite&&<section className="panel" style={{marginBottom:18}}>
      <div className="panel-header"><h3>Import OFX / QFX statement</h3><span>Bank file · up to 512 KB</span></div>
      <p className="form-note">Upload a downloaded bank statement. Select the bank ledger account that corresponds to the source statement. Imports are checked for duplicates and do not automatically post accounting journals.</p>
