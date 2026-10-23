@@ -128,6 +128,31 @@ assert.equal(secondOfx.result.imported,0);
 r=await request("/api/operations/bank-suggestions",{cookie});
 assert.equal(r.status,200);
 assert.equal(r.result.summary.unmatched,1,"Unmatched OFX fee stays pending reconciliation");
+r=await request("/api/operations/feed/connections",{method:"POST",cookie,body:{action:"issue",bankAccountId:cash.id}});
+assert.equal(r.status,200,"Create scoped feed connection");
+const feedCredential=r.result.token;
+const payload={eventId:"evt-"+randomUUID(),accountLast4:"1234",currency:"ZAR",
+ transactions:[{transactionId:"txn-"+randomUUID(),bookedOn:current,description:"Bank sync smoke test",signedAmount:"-2.50"}]};
+async function deliver(event){
+ const response=await fetch(base+"/api/operations/feed/webhook",{
+  method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+feedCredential},
+  body:JSON.stringify(event)});
+ return {status:response.status,result:await response.json()};
+}
+let delivery=await deliver(payload);
+assert.equal(delivery.status,200,"Ingest first bank feed event: "+JSON.stringify(delivery.result));
+assert.equal(delivery.result.imported,1);
+delivery=await deliver(payload);
+assert.equal(delivery.status,200,"Duplicate deliveries must be idempotent");
+assert.equal(delivery.result.alreadyProcessed,true);
+delivery=await deliver({...payload,eventId:"evt-"+randomUUID()});
+assert.equal(delivery.status,200,"Duplicate transactions in a new event are recognised");
+assert.equal(delivery.result.imported,0);
+assert.equal(delivery.result.duplicates,1);
+r=await request("/api/operations/feed/connections",{method:"POST",cookie,body:{action:"disable",bankAccountId:cash.id}});
+assert.equal(r.status,200,"Revoke bank feed connection");
+delivery=await deliver({...payload,eventId:"evt-"+randomUUID()});
+assert.equal(delivery.status,401,"Disabled connection cannot ingest further events");
 r=await request("/api/audit-trail",{cookie});
 assert.equal(r.status,200,"Tenant-scoped audit trail");
 assert.ok(r.result.events.some(x=>x.action==="journal.posted"),"Audit trail records posted journal provenance");
