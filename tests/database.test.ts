@@ -46,6 +46,13 @@ test("RLS isolates tenants, posting constraints and session-local context",async
     assert.equal(denied.rowCount,0,"cross-tenant account read must be hidden");
     const tenantDenied=await client.query("SELECT id FROM tenants WHERE id=$1",[b.tenantId]);
     assert.equal(tenantDenied.rowCount,0,"cross-tenant identity must be hidden");
+    await client.query("SAVEPOINT disallowed_write");
+    await assert.rejects(
+      client.query("INSERT INTO accounts(tenant_id,code,name,type) VALUES($1,'X900','Forbidden cross-tenant insert','asset')",[b.tenantId]),
+      /row-level security/i,
+      "another tenant's records must not be writable"
+    );
+    await client.query("ROLLBACK TO SAVEPOINT disallowed_write");
     await client.query("COMMIT");
     const cleared=await client.query("SELECT count(*)::int AS n FROM accounts");
     assert.equal(cleared.rows[0].n,0,"transaction-local context must not leak to reused pooled clients");
@@ -61,6 +68,11 @@ test("RLS isolates tenants, posting constraints and session-local context",async
     await client.query("COMMIT");
     await client.query("BEGIN");
     await ctx(client,a.userId,a.tenantId);
+    const duplicate=await client.query(
+      "INSERT INTO journal_entries(tenant_id,entry_date,memo,idempotency_key,created_by) VALUES($1,current_date,'Duplicate request',$2,$3) ON CONFLICT(tenant_id,idempotency_key) DO NOTHING RETURNING id",
+      [a.tenantId,key,a.userId]
+    );
+    assert.equal(duplicate.rowCount,0,"idempotency key must prevent duplicate postings");
     const sums=await client.query("SELECT sum(debit)::text AS debit,sum(credit)::text AS credit FROM journal_lines WHERE tenant_id=$1",[a.tenantId]);
     assert.equal(sums.rows[0].debit,"200.10");
     assert.equal(sums.rows[0].credit,"200.10");
