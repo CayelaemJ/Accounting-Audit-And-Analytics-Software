@@ -39,6 +39,7 @@ export async function tenantTx<T>(ctx: { userId: string; tenantId: string }, fn:
     await setActor(client, ctx.userId, ctx.tenantId);
     const member = await client.query("SELECT role FROM memberships WHERE tenant_id=$1 AND user_id=$2 AND active=true", [ctx.tenantId, ctx.userId]);
     if (!member.rowCount) throw new Error("Membership is inactive or missing");
+    await client.query("SELECT set_config('app.user_role', $1, true)", [member.rows[0].role]);
     return fn(client);
   });
 }
