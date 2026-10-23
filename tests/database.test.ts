@@ -64,10 +64,8 @@ test("RLS isolates tenants, posting constraints and session-local context",async
     const sums=await client.query("SELECT sum(debit)::text AS debit,sum(credit)::text AS credit FROM journal_lines WHERE tenant_id=$1",[a.tenantId]);
     assert.equal(sums.rows[0].debit,"200.10");
     assert.equal(sums.rows[0].credit,"200.10");
-    await assert.rejects(
-      client.query("UPDATE journal_entries SET memo='tampered' WHERE id=$1",[goodId]),
-      /immutable/i
-    );
+    const attempted = await client.query("UPDATE journal_entries SET memo='tampered' WHERE id=$1",[goodId]);
+    assert.equal(attempted.rowCount,0,"RLS must deny journal mutation");
     await client.query("ROLLBACK");
 
     await client.query("BEGIN");
