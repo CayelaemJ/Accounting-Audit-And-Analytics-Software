@@ -16,7 +16,9 @@ export async function GET() {
           coalesce(sum(CASE WHEN a.type='revenue' THEN l.credit-l.debit ELSE 0 END),0)::text AS revenue,
           coalesce(sum(CASE WHEN a.type='expense' THEN l.debit-l.credit ELSE 0 END),0)::text AS expenses,
           coalesce(sum(CASE WHEN a.type='asset' THEN l.debit-l.credit ELSE 0 END),0)::text AS assets,
-          coalesce(sum(CASE WHEN a.type='liability' THEN l.credit-l.debit ELSE 0 END),0)::text AS liabilities
+          coalesce(sum(CASE WHEN a.type='liability' THEN l.credit-l.debit ELSE 0 END),0)::text AS liabilities,
+          (coalesce(sum(CASE WHEN a.type='revenue' THEN l.credit-l.debit ELSE 0 END),0) -
+           coalesce(sum(CASE WHEN a.type='expense' THEN l.debit-l.credit ELSE 0 END),0))::text AS profit
         FROM journal_lines l JOIN accounts a ON a.id=l.account_id AND a.tenant_id=l.tenant_id
         WHERE l.tenant_id=$1
       `,[session.tenantId]);
