@@ -17,6 +17,11 @@ export async function POST(req:NextRequest){
   const result=await tenantTx(user,async c=>{
    const original=await c.query("SELECT id,entry_date,memo FROM journal_entries WHERE tenant_id=$1 AND id=$2 FOR SHARE",[user.tenantId,x.journalId]);
    if(!original.rowCount)throw new Error("Journal not found.");
+   const linked=await c.query(`SELECT
+    (SELECT count(*) FROM invoices WHERE tenant_id=$1 AND journal_id=$2) +
+    (SELECT count(*) FROM invoice_allocations WHERE tenant_id=$1 AND journal_id=$2) +
+    (SELECT count(*) FROM bank_matches WHERE tenant_id=$1 AND journal_id=$2) AS n`,[user.tenantId,x.journalId]);
+   if(Number(linked.rows[0].n)>0)throw new Error("This journal supports a posted invoice, payment or bank reconciliation and cannot be reversed independently.");
    const duplicate=await c.query("SELECT 1 FROM journal_reversals WHERE tenant_id=$1 AND (original_entry_id=$2 OR reversal_entry_id=$2)",[user.tenantId,x.journalId]);
    if(duplicate.rowCount)throw new Error("Journal is already reversed or is itself a reversal.");
    const lines=await c.query("SELECT account_id,debit::text,credit::text FROM journal_lines WHERE tenant_id=$1 AND entry_id=$2 ORDER BY line_no",[user.tenantId,x.journalId]);
@@ -36,7 +41,7 @@ export async function POST(req:NextRequest){
   });
   return NextResponse.json(result,{status:201});
  }catch(error){
-  if(error instanceof Error&&/Journal not found|already reversed|Original journal/.test(error.message))return jsonError(error.message,409);
+  if(error instanceof Error&&/Journal not found|already reversed|Original journal|cannot be reversed independently/.test(error.message))return jsonError(error.message,409);
   if((error as {code?:string})?.code==="23505")return jsonError("Journal was already reversed.",409);
   if((error as {code?:string})?.code==="P0001")return jsonError("The requested journal date is not in an open financial period.",422);
   return unexpected(error);
