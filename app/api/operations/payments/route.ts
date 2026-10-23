@@ -19,7 +19,8 @@ export async function POST(req:NextRequest){
  if(cents<=0n)return jsonError("Payment must be positive.");
  const posted=await tenantTx(session,async c=>{
   // Serialise all allocations for a given invoice to stop concurrent over-payment.
-  const inv=await c.query("SELECT id,kind,total_amount::text FROM invoices WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+  await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[session.tenantId+":"+x.invoiceId]);
+  const inv=await c.query("SELECT id,kind,total_amount::text FROM invoices WHERE tenant_id=$1 AND id=$2",
    [session.tenantId,x.invoiceId]);
   if(!inv.rowCount)throw new Error("Invoice not found.");
   const existing=await c.query("SELECT a.id,a.journal_id FROM invoice_allocations a JOIN journal_entries j ON j.id=a.journal_id AND j.tenant_id=a.tenant_id WHERE a.tenant_id=$1 AND j.idempotency_key=$2",
