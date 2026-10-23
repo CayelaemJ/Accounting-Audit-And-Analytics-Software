@@ -172,6 +172,7 @@ export default function OperationsClient(){
   </>}
   {tab==="banking"&&<>
    <div className="notice">Import your own CSV transactions and match each bank item to an existing journal with an equal, signed movement on the same asset account. This is manual statement reconciliation; no live bank feeds are connected.</div>
+   <Link className="button primary" href="/bank-review" style={{marginBottom:18}}>Review suggested bank matches →</Link>
    {canWrite&&<div className="content-grid">
     <section className="panel"><h3>Import bank statement CSV</h3>
      <label>Load CSV file<input type="file" accept=".csv,text/csv" onChange={e=>{

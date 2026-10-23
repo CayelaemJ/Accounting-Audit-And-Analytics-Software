@@ -43,7 +43,12 @@ export async function POST(req:NextRequest){
   });return NextResponse.json(result,{status:201});
  }
  const result=await tenantTx(user,async c=>{
-  const transaction=await c.query("SELECT id,bank_account_id,signed_amount::text FROM bank_transactions WHERE tenant_id=$1 AND id=$2 FOR UPDATE",[user.tenantId,x.bankTransactionId]);
+  // Serialize this bank item with a transaction-scoped advisory lock.
+  // The application role intentionally lacks UPDATE on immutable statement rows;
+  // SELECT FOR UPDATE would fail under least-privileged PostgreSQL RLS.
+  await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+    [user.tenantId+":"+x.bankTransactionId]);
+  const transaction=await c.query("SELECT id,bank_account_id,signed_amount::text FROM bank_transactions WHERE tenant_id=$1 AND id=$2",[user.tenantId,x.bankTransactionId]);
   if(!transaction.rowCount)throw new Error("Bank transaction not found.");
   const journal=await c.query(`SELECT coalesce(sum(l.debit-l.credit),0)::text AS net,
     count(*)::int AS line_count FROM journal_lines l
