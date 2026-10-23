@@ -92,6 +92,36 @@ assert.ok(!r.result.suggestions.some(x=>x.bankTransactionId===suggested.bankTran
 assert.equal(r.result.summary.matched,1);
 r=await request("/api/operations/bank-suggestions");
 assert.equal(r.status,401,"Bank reconciliation candidates are not public");
+const fitid="OFX-"+randomUUID();
+const ofx=`OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>ZAR
+<BANKACCTFROM><BANKID>0001<ACCTID>00001234<ACCTTYPE>CHECKING</BANKACCTFROM>
+<BANKTRANLIST><STMTTRN><DTPOSTED>${current.replaceAll("-","")}120000
+<TRNAMT>-12.34<FITID>${fitid}<NAME>Monthly bank fee</STMTTRN></BANKTRANLIST>
+</STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`;
+async function ofxUpload(){
+ const form=new FormData();
+ form.set("bankAccountId",cash.id);
+ form.set("statement",new Blob([ofx],{type:"application/octet-stream"}),"smoke-statement.ofx");
+ const response=await fetch(base+"/api/operations/statements/import",{
+  method:"POST",headers:{Origin:base,Cookie:cookie},body:form
+ });
+ const body=await response.json();
+ return {status:response.status,result:body};
+}
+const firstOfx=await ofxUpload();
+assert.equal(firstOfx.status,200,"OFX statement upload: "+JSON.stringify(firstOfx.result));
+assert.equal(firstOfx.result.imported,1,"One new bank entry must be recorded");
+assert.equal(firstOfx.result.statementAccountLast4,"1234");
+const secondOfx=await ofxUpload();
+assert.equal(secondOfx.status,200,"Reimported statement should be safely idempotent");
+assert.equal(secondOfx.result.duplicates,1);
+assert.equal(secondOfx.result.imported,0);
+r=await request("/api/operations/bank-suggestions",{cookie});
+assert.equal(r.status,200);
+assert.equal(r.result.summary.unmatched,1,"Unmatched OFX fee stays pending reconciliation");
 r=await request("/api/audit-trail",{cookie});
 assert.equal(r.status,200,"Tenant-scoped audit trail");
 assert.ok(r.result.events.some(x=>x.action==="journal.posted"),"Audit trail records posted journal provenance");

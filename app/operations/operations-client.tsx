@@ -173,6 +173,30 @@ export default function OperationsClient(){
   {tab==="banking"&&<>
    <div className="notice">Import your own CSV transactions and match each bank item to an existing journal with an equal, signed movement on the same asset account. This is manual statement reconciliation; no live bank feeds are connected.</div>
    <Link className="button primary" href="/bank-review" style={{marginBottom:18}}>Review suggested bank matches →</Link>
+   {canWrite&&<section className="panel" style={{marginBottom:18}}>
+     <div className="panel-header"><h3>Import OFX / QFX statement</h3><span>Bank file · up to 512 KB</span></div>
+     <p className="form-note">Upload a downloaded bank statement. Select the bank ledger account that corresponds to the source statement. Imports are checked for duplicates and do not automatically post accounting journals.</p>
+     <form className="stack-18" onSubmit={e=>void (async()=>{
+       e.preventDefault();
+       const form=e.currentTarget;
+       setWorking(true);setError("");setMessage("");
+       try{
+         const result=await fetch("/api/operations/statements/import",{method:"POST",body:new FormData(form)});
+         const data=await result.json();
+         if(!result.ok)throw Error(data.error||"Statement import failed");
+         setMessage("OFX import completed: "+data.imported+" new, "+data.duplicates+" duplicate entries. Source account ending "+data.statementAccountLast4+". Confirm the linked ledger account is correct before reconciling.");
+         await refresh();form.reset();
+       }catch(err){setError((err as Error).message);}finally{setWorking(false);}
+     })()}>
+       <label>Corresponding bank asset ledger<select name="bankAccountId" required>
+         <option value="">Choose your bank account</option>
+         {bankAccounts.map(x=><option value={x.id} key={x.id}>{x.code} — {x.name}</option>)}
+       </select></label>
+       <label>OFX or QFX file<input name="statement" type="file" accept=".ofx,.qfx" required/></label>
+       <button className="button primary" disabled={working}>Import statement transactions</button>
+     </form>
+     <p className="form-note" style={{marginTop:12}}>No direct access to your bank account is requested. The bank's source account is shown by its last four digits after import; this release does not automatically verify the selected ledger account against a bank registry.</p>
+   </section>}
    {canWrite&&<div className="content-grid">
     <section className="panel"><h3>Import bank statement CSV</h3>
      <label>Load CSV file<input type="file" accept=".csv,text/csv" onChange={e=>{
