@@ -186,6 +186,13 @@ assert.equal(r.status,200,"Username authentication");assert.ok(r.cookie,"Usernam
 const admin=await request("/api/admin/overview",{cookie:r.cookie});
 assert.equal(admin.status,200,"Verified platform administrator");
 assert.ok(admin.result.summary.organisations>=1);
+const worksheet=await request("/api/operations/reconciliation-worksheet?start="+current+"&end="+current,{cookie});
+assert.equal(worksheet.status,200,"Authenticated reconciliation worksheet loads");
+assert.ok(Array.isArray(worksheet.result.accounts),"Worksheet provides account movement rows");
+const invalidWorksheet=await request("/api/operations/reconciliation-worksheet?start=not-a-date",{cookie});
+assert.equal(invalidWorksheet.status,400,"Worksheet validates statement dates");
+const anonymousWorksheet=await request("/api/operations/reconciliation-worksheet");
+assert.equal(anonymousWorksheet.status,401,"Bank worksheet requires a tenant session");
 const changed=await request("/api/security/password",{method:"POST",cookie:r.cookie,
  body:{currentPassword:password,newPassword:"CI-NewPassword-2026!-"+randomUUID().slice(0,12)}});
 assert.equal(changed.status,200,"Password change must succeed and revoke all sessions");
