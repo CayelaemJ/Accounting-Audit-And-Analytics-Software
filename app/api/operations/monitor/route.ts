@@ -8,7 +8,10 @@ export async function GET(){
  const user=await currentSession();if(!user)return jsonError("Sign in required.",401);
  const observations=await tenantTx(user,async c=>{
   const [overdue,unmatched,remediation,failedControls]=await Promise.all([
-  c.query(`SELECT id,reference,due_date,total_amount::text AS amount FROM invoices WHERE tenant_id=$1 AND due_date<current_date ORDER BY due_date LIMIT 50`,[user.tenantId]),
+  c.query(`SELECT i.id,i.reference,i.due_date,(i.total_amount-coalesce(p.paid,0))::text AS amount
+ FROM invoices i LEFT JOIN LATERAL (SELECT coalesce(sum(a.amount),0) AS paid FROM invoice_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id) p ON true
+ WHERE i.tenant_id=$1 AND i.due_date<current_date AND i.total_amount>coalesce(p.paid,0)
+ ORDER BY i.due_date LIMIT 50`,[user.tenantId]),
   c.query(`SELECT b.id,b.booked_on,b.signed_amount::text AS amount FROM bank_transactions b
    LEFT JOIN bank_matches m ON m.tenant_id=b.tenant_id AND m.bank_transaction_id=b.id
    WHERE b.tenant_id=$1 AND m.bank_transaction_id IS NULL AND b.booked_on<current_date-interval '30 days'
@@ -17,7 +20,7 @@ export async function GET(){
   c.query(`SELECT t.id,c.code,t.result,t.notes FROM audit_tests t JOIN audit_controls c ON c.id=t.control_id AND c.tenant_id=t.tenant_id WHERE t.tenant_id=$1 AND t.result='fail' ORDER BY t.tested_at DESC LIMIT 50`,[user.tenantId])
   ]);
   return [
-   ...overdue.rows.map(r=>({rule:"invoice_due",severity:"medium",recordId:r.id,description:"Past-due invoice: "+r.reference+" (payment status not yet tracked)",date:r.due_date})),
+   ...overdue.rows.map(r=>({rule:"invoice_due",severity:"medium",recordId:r.id,description:"Past-due invoice: "+r.reference+" (outstanding amount: "+r.amount+")",date:r.due_date})),
    ...unmatched.rows.map(r=>({rule:"unmatched_bank_30d",severity:"high",recordId:r.id,description:"Bank entry older than 30 days remains unmatched",date:r.booked_on})),
    ...remediation.rows.map(r=>({rule:"overdue_remediation",severity:"high",recordId:r.id,description:"Remediation action past due: "+r.description,date:r.due_date})),
    ...failedControls.rows.map(r=>({rule:"failed_control_test",severity:"high",recordId:r.id,description:"Failed control test: "+r.code,date:null}))

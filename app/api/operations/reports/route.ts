@@ -7,11 +7,14 @@ export async function GET(){
  try{
  const user=await currentSession();if(!user)return jsonError("Sign in required.",401);
  const report=await tenantTx(user,async c=>{
- const [periods,contacts,invoices,banks,balances,monthly,budgets,engagements,controls,tests,actions]=await Promise.all([
+ const [periods,contacts,invoices,banks,balances,monthly,budgets,engagements,controls,tests,actions,evidence,reviews]=await Promise.all([
  c.query("SELECT id,label,start_date,end_date,status FROM financial_periods WHERE tenant_id=$1 ORDER BY start_date DESC LIMIT 30",[user.tenantId]),
  c.query("SELECT id,name,kind,email FROM contacts WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 100",[user.tenantId]),
- c.query(`SELECT i.id,i.kind,i.reference,i.invoice_date,i.due_date,i.net_amount::text,i.tax_amount::text,i.total_amount::text,c.name AS contact_name
+ c.query(`SELECT i.id,i.kind,i.reference,i.invoice_date,i.due_date,i.net_amount::text,i.tax_amount::text,i.total_amount::text,
+ (i.total_amount-coalesce(alloc.applied,0))::text AS outstanding_amount,c.name AS contact_name
  FROM invoices i JOIN contacts c ON c.id=i.contact_id AND c.tenant_id=i.tenant_id
+ LEFT JOIN LATERAL (SELECT coalesce(sum(p.amount),0) AS applied FROM invoice_allocations p
+  WHERE p.tenant_id=i.tenant_id AND p.invoice_id=i.id) alloc ON true
  WHERE i.tenant_id=$1 ORDER BY i.created_at DESC LIMIT 100`,[user.tenantId]),
  c.query(`SELECT b.id,b.booked_on,b.description,b.signed_amount::text,b.source_ref,a.code AS bank_code,
   m.journal_id,m.matched_at FROM bank_transactions b JOIN accounts a ON a.id=b.bank_account_id
@@ -32,11 +35,13 @@ export async function GET(){
  c.query("SELECT id,title,objective,status FROM audit_engagements WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 50",[user.tenantId]),
  c.query("SELECT id,code,title,risk,owner,frequency FROM audit_controls WHERE tenant_id=$1 ORDER BY code LIMIT 100",[user.tenantId]),
  c.query("SELECT t.id,t.result,t.notes,t.tested_at,c.code FROM audit_tests t JOIN audit_controls c ON c.id=t.control_id AND c.tenant_id=t.tenant_id WHERE t.tenant_id=$1 ORDER BY t.tested_at DESC LIMIT 100",[user.tenantId]),
- c.query("SELECT a.id,a.finding_id,a.description,a.due_date,a.status FROM remediation_actions a WHERE a.tenant_id=$1 ORDER BY a.due_date LIMIT 100",[user.tenantId])
+ c.query("SELECT a.id,a.finding_id,a.description,a.due_date,a.status FROM remediation_actions a WHERE a.tenant_id=$1 ORDER BY a.due_date LIMIT 100",[user.tenantId]),
+ c.query("SELECT e.id,e.title,e.source_ref,e.notes,e.evidence_sha256,e.created_at FROM audit_evidence e WHERE e.tenant_id=$1 ORDER BY e.created_at DESC LIMIT 100",[user.tenantId]),
+ c.query("SELECT r.id,r.title,r.body,r.status,r.prepared_by,r.approved_by FROM audit_reports r WHERE r.tenant_id=$1 ORDER BY r.created_at DESC LIMIT 100",[user.tenantId])
  ]);
  return {periods:periods.rows,contacts:contacts.rows,invoices:invoices.rows,bankTransactions:banks.rows,
  trialBalance:balances.rows,monthlyActuals:monthly.rows,budgets:budgets.rows,
- engagements:engagements.rows,controls:controls.rows,controlTests:tests.rows,actions:actions.rows,
+ engagements:engagements.rows,controls:controls.rows,controlTests:tests.rows,actions:actions.rows,evidence:evidence.rows,auditReports:reviews.rows,
  note:"Cumulative ledger net balances. Period-close and VAT statements require professional review.",refreshedAt:new Date().toISOString()};
  });
  return NextResponse.json(report,{headers:{"Cache-Control":"no-store"}});
