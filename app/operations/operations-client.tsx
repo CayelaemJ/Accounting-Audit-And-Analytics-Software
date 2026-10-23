@@ -3,7 +3,7 @@ import Link from "next/link";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 type R=Record<string,any>;
 type Report={contacts:R[];invoices:R[];bankTransactions:R[];periods:R[];budgets:R[];evidence:R[];auditReports:R[];
- trialBalance:R[];monthlyActuals:R[];engagements:R[];controls:R[];controlTests:R[];actions:R[];refreshedAt:string};
+ trialBalance:R[];monthlyActuals:R[];engagements:R[];controls:R[];controlTests:R[];actions:R[];statement:R;refreshedAt:string};
 type Overview={accounts:R[];entries:R[];findings:R[];tenant:{name:string;currency:string};role:string};
 type Monitor={observations:R[];refreshedAt:string};
 type Tab="invoices"|"banking"|"planning"|"assurance"|"reports"|"exceptions"|"team";
@@ -297,6 +297,21 @@ export default function OperationsClient(){
   </>}
   {tab==="reports"&&<>
     <div className="notice">Unaudited cumulative general ledger balances. These are not formal IFRS or SARS statements, and period attribution must be reviewed before external distribution.</div>
+    <div className="kpi-grid">
+      <div className="kpi"><span className="kpi-label">Recorded revenue</span><div className="kpi-value">{money(report.statement?.revenue,overview.tenant.currency)}</div><p className="form-note">Cumulative posted revenue</p></div>
+      <div className="kpi"><span className="kpi-label">Recorded expenses</span><div className="kpi-value">{money(report.statement?.expenses,overview.tenant.currency)}</div><p className="form-note">Cumulative posted expenses</p></div>
+      <div className="kpi"><span className="kpi-label">Revenue less expenses</span><div className="kpi-value">{money(Number(report.statement?.revenue||0)-Number(report.statement?.expenses||0),overview.tenant.currency)}</div><p className="form-note">Simplified pretax result</p></div>
+      <div className="kpi"><span className="kpi-label">Total assets</span><div className="kpi-value">{money(report.statement?.assets,overview.tenant.currency)}</div><p className="form-note">Net recorded asset balances</p></div>
+    </div>
+    <section className="panel" style={{marginTop:18,marginBottom:18}}>
+      <h3>Management financial position</h3>
+      <div className="grid-3">
+        <div><p className="muted">Assets</p><h3>{money(report.statement?.assets)}</h3></div>
+        <div><p className="muted">Liabilities</p><h3>{money(report.statement?.liabilities)}</h3></div>
+        <div><p className="muted">Equity (excluding current result)</p><h3>{money(report.statement?.equity)}</h3></div>
+      </div>
+      <p className="form-note">This management view is not an IFRS-compliant statutory statement. Revenue and expense balances are displayed separately until proper close entries are posted.</p>
+    </section>
     <section className="panel"><div className="panel-header"><h3>Net account balances</h3><span>Read-only reporting from committed ledger records</span></div>
      <div className="table-wrap"><table><thead><tr><th>Code</th><th>Account</th><th>Classification</th><th className="right">Net debit</th><th className="right">Net credit</th></tr></thead>
      <tbody>{report.trialBalance.map(x=><tr key={x.code}><td>{x.code}</td><td>{x.name}</td><td>{x.type}</td>
