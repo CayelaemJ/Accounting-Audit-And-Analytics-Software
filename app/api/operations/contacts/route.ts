@@ -4,7 +4,7 @@ import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
 import {jsonError,requireSameOrigin,unexpected} from "@/lib/http";
 export const runtime="nodejs";
-const schema=z.object({kind:z.enum(["customer","supplier"]),name:z.string().trim().min(2).max(180),email:z.string().trim().email().max(200).optional()}).strict();
+const schema=z.object({kind:z.enum(["customer","supplier"]),name:z.string().trim().min(2).max(180),email:z.union([z.literal(''),z.string().trim().email().max(200)]).optional()}).strict();
 export async function POST(req:NextRequest){
  try{
  requireSameOrigin(req);const user=await currentSession();

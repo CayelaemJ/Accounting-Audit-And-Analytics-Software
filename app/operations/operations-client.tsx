@@ -6,9 +6,9 @@ type Report={contacts:R[];invoices:R[];bankTransactions:R[];periods:R[];budgets:
  trialBalance:R[];monthlyActuals:R[];engagements:R[];controls:R[];controlTests:R[];actions:R[];refreshedAt:string};
 type Overview={accounts:R[];entries:R[];findings:R[];tenant:{name:string;currency:string};role:string};
 type Monitor={observations:R[];refreshedAt:string};
-type Tab="invoices"|"banking"|"planning"|"assurance"|"reports"|"exceptions";
+type Tab="invoices"|"banking"|"planning"|"assurance"|"reports"|"exceptions"|"team";
 const tabs:{id:Tab;title:string}[]=[{id:"invoices",title:"Customers & invoices"},{id:"banking",title:"Bank reconciliation"},
- {id:"planning",title:"Budgets & periods"},{id:"assurance",title:"Audit workbench"},{id:"reports",title:"Statements"},{id:"exceptions",title:"Continuous monitoring"}];
+ {id:"planning",title:"Budgets & periods"},{id:"team",title:"Organisation & team"},{id:"assurance",title:"Audit workbench"},{id:"reports",title:"Statements"},{id:"exceptions",title:"Continuous monitoring"}];
 function read(form:HTMLFormElement){return Object.fromEntries(new FormData(form).entries()) as Record<string,string>;}
 function money(value:unknown,currency="ZAR"){return new Intl.NumberFormat("en-ZA",{style:"currency",currency}).format(Number(value||0));}
 function date(value:unknown){return String(value||"").slice(0,10);}
@@ -44,12 +44,19 @@ export default function OperationsClient(){
  const [error,setError]=useState("");
  const [message,setMessage]=useState("");
  const [csv,setCsv]=useState("");
+ const [members,setMembers]=useState<R[]>([]);
+ const [orgs,setOrgs]=useState<R[]>([]);
  const refresh=useCallback(async()=>{
   const requests=await Promise.all(["/api/operations/reports","/api/overview","/api/operations/monitor"].map(p=>fetch(p,{cache:"no-store"})));
   if(requests.some(r=>r.status===401)){window.location.assign("/login");return;}
   if(requests.some(r=>!r.ok))throw new Error("Couldn't load operations. Check database migration and access.");
   const [a,b,c]=await Promise.all(requests.map(r=>r.json()));
   setReport(a);setOverview(b);setMonitor(c);
+  const memberships=await fetch("/api/auth/organisations",{cache:"no-store"});
+  if(memberships.ok){const o=await memberships.json();setOrgs(o.memberships||[]);}
+  if(b.role==="owner"){const people=await fetch("/api/operations/team",{cache:"no-store"});
+    if(people.ok){const m=await people.json();setMembers(m.members||[]);}}
+
  },[]);
  useEffect(()=>{refresh().catch(e=>setError((e as Error).message));
  const timer=setInterval(()=>{refresh().catch(()=>{});},30000);
@@ -118,6 +125,32 @@ export default function OperationsClient(){
       <section className="panel"><h3>Contacts</h3>{report.contacts.map(x=><div className="audit-item" key={x.id}>{x.name}<span className="pill">{x.kind}</span></div>)}
        {!report.contacts.length&&<div className="empty">No contacts yet</div>}</section>
     </div>
+  </>}
+  {tab==="team"&&<>
+   <div className="content-grid">
+    <section className="panel"><h3>Organisation membership</h3>
+     <p className="form-note">Your current organisation is {overview.tenant.name}. You can change to another organisation where your account is an active member.</p>
+     {orgs.map(o=><div className="audit-item" key={o.tenant_id}>
+       <span>Organisation {String(o.tenant_id).slice(0,8)}<p className="form-note">{o.role} · {o.tenant_id}</p></span>
+       <button className="button" disabled={working} onClick={async()=>{
+         setWorking(true);setError("");
+         try{const r=await fetch("/api/auth/organisations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tenantId:o.tenant_id})});
+          const x=await r.json();if(!r.ok)throw new Error(x.error||"Switch failed");window.location.assign("/dashboard");
+         }catch(e){setError((e as Error).message);}finally{setWorking(false);}
+       }}>Switch</button></div>)}
+    </section>
+    <section className="panel"><h3>Team access</h3>
+     {!canManage?<p className="muted">Only the tenant owner can manage collaborators.</p>:<>
+     {overview.role==="owner"&&<form className="stack-18" onSubmit={e=>void submit(e,"/api/operations/team")}>
+       <label>Existing CABO account email<input required type="email" name="email"/></label>
+       <label>Role<select name="role"><option value="accountant">Accountant</option><option value="finance_manager">Finance manager</option><option value="auditor">Auditor</option><option value="viewer">Read-only viewer</option></select></label>
+       <button className="button primary" disabled={working}>Add collaborator</button>
+       <p className="form-note">The user must have registered an account. Access is subject to organisation membership and permission checks.</p>
+      </form>}
+     {members.map(m=><div key={m.user_id} className="audit-item">{m.email} <span className="pill">{m.role}</span></div>)}
+     </>}
+    </section>
+   </div>
   </>}
   {tab==="banking"&&<>
    <div className="notice">Import your own CSV transactions and match each bank item to an existing journal with an equal, signed movement on the same asset account. This is manual statement reconciliation; no live bank feeds are connected.</div>

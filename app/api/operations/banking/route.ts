@@ -51,7 +51,7 @@ export async function POST(req:NextRequest){
     [user.tenantId,x.journalId,transaction.rows[0].bank_account_id]);
   const exists=await c.query("SELECT 1 FROM journal_entries WHERE tenant_id=$1 AND id=$2",[user.tenantId,x.journalId]);
   if(!exists.rowCount || !journal.rows[0].line_count)throw new Error("Journal has no lines for this bank account.");
-  const net=BigInt(Math.round(Number(journal.rows[0].net)*100));
+  const net=signedCents(journal.rows[0].net);
   const value=signedCents(transaction.rows[0].signed_amount);
   if(net!==value)throw new Error("Bank amount must exactly equal the journal's signed movement on this account.");
   const r=await c.query(`INSERT INTO bank_matches(tenant_id,bank_transaction_id,journal_id,matched_by) VALUES($1,$2,$3,$4)
