@@ -55,6 +55,12 @@ r=await request("/api/journals/reverse",{method:"POST",cookie,body:{journalId:po
 assert.equal(r.status,409,"Duplicate reversal blocked");
 r=await request("/api/overview",{cookie});
 assert.equal(r.result.totals.revenue,"100.00","Reversal must not change unrelated revenue");
+r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"create",name:"Monthly test posting",memo:"Recurring test entry",lines:[{accountId:cash.id,side:"debit",amount:"20.00"},{accountId:capital.id,side:"credit",amount:"20.00"}]}});
+assert.equal(r.status,201,"Create recurring template");const templateId=r.result.template.id;
+r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"post",templateId,postingDate:current}});
+assert.equal(r.status,201,"Post recurring journal");const recurringJournalId=r.result.journalId;
+r=await request("/api/journals/recurring",{method:"POST",cookie,body:{action:"post",templateId,postingDate:current}});
+assert.equal(r.status,200,"Idempotent recurring retry");assert.equal(r.result.journalId,recurringJournalId);
 r=await request("/api/reports/saved",{method:"POST",cookie,body:{name:"CI trial balance",template:"trial_balance"}});
 assert.equal(r.status,201,"Create saved report definition");const reportId=r.result.report.id;
 r=await request("/api/reports/saved/"+reportId,{cookie});assert.equal(r.status,200);
