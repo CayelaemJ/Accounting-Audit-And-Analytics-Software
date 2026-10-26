@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from "next/server";
-import {createHash} from "node:crypto";
+import {normaliseBankRow} from "@/lib/bank-import";
 import {z} from "zod";
 import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
@@ -23,17 +23,16 @@ export async function POST(req:NextRequest){
  const parsed=schema.safeParse(await req.json());if(!parsed.success)return jsonError("Review banking details.");
  const x=parsed.data;
  if(x.action==="import"){
-  const rows=x.rows.map(r=>({...r,amount:signedCents(r.signedAmount)}));
-  if(rows.some(r=>r.amount===0n))return jsonError("Zero-value bank transactions cannot be imported.");
+  let rows:ReturnType<typeof normaliseBankRow>[];
+  try{rows=x.rows.map(normaliseBankRow);}catch{return jsonError("Invalid bank booking date or zero-value amount.");}
   const result=await tenantTx(user,async c=>{
    const acc=await c.query("SELECT id FROM accounts WHERE tenant_id=$1 AND id=$2 AND type='asset'",[user.tenantId,x.bankAccountId]);
    if(!acc.rowCount)throw new Error("Bank account must be an asset account owned by this organisation.");
    let imported=0,duplicates=0;
    for(const entry of rows){
-    const hash=createHash("sha256").update(JSON.stringify([entry.bookedOn,entry.sourceRef,entry.signedAmount,entry.description])).digest("hex");
     const r=await c.query(`INSERT INTO bank_transactions(tenant_id,bank_account_id,booked_on,description,signed_amount,source_ref,source_hash,created_by)
      VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tenant_id,bank_account_id,source_hash) DO NOTHING RETURNING id`,
-     [user.tenantId,x.bankAccountId,entry.bookedOn,entry.description,fromCents(entry.amount),entry.sourceRef,hash,user.userId]);
+     [user.tenantId,x.bankAccountId,entry.bookedOn,entry.description,entry.signedAmount,entry.sourceRef,entry.sourceHash,user.userId]);
     if(r.rowCount)imported++;else duplicates++;
    }
    const eventId=(await c.query("SELECT gen_random_uuid() AS id")).rows[0].id;
