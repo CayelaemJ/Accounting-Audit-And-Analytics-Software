@@ -1,3 +1,4 @@
+import {validISODate} from "@/lib/aging";
 import {NextRequest,NextResponse} from "next/server";
 import {z} from "zod";
 import {currentSession} from "@/lib/auth";
@@ -11,7 +12,7 @@ export async function POST(req:NextRequest){
  requireSameOrigin(req);const user=await currentSession();
  if(!user)return jsonError("Sign in required.",401);
  if(!["owner","finance_manager"].includes(user.role))return jsonError("Finance manager permission required.",403);
- const v=schema.safeParse(await req.json());if(!v.success||v.data.startDate>v.data.endDate)return jsonError("Invalid period dates.");
+ const v=schema.safeParse(await req.json());if(!v.success||!validISODate(v.data.startDate)||!validISODate(v.data.endDate)||v.data.startDate>v.data.endDate)return jsonError("Invalid period dates.");
  const period=await tenantTx(user,async c=>{
  await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[user.tenantId]);
  const overlaps=await c.query("SELECT 1 FROM financial_periods WHERE tenant_id=$1 AND start_date<=$3 AND end_date>=$2",[user.tenantId,v.data.startDate,v.data.endDate]);
