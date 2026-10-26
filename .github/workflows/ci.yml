@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feature/cabo-financial-intelligence-foundation]
 permissions:
   contents: read
 jobs:
