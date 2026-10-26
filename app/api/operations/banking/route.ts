@@ -3,7 +3,7 @@ import {normaliseBankRow} from "@/lib/bank-import";
 import {z} from "zod";
 import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
-import {jsonError,requireSameOrigin,unexpected} from "@/lib/http";
+import {jsonError,requireSameOrigin,limit,unexpected} from "@/lib/http";
 import {toCents,fromCents} from "@/lib/money";
 export const runtime="nodejs";
 const row=z.object({
@@ -20,6 +20,7 @@ export async function POST(req:NextRequest){
  try{
  requireSameOrigin(req);const user=await currentSession();if(!user)return jsonError("Sign in required.",401);
  if(!canWrite(user.role))return jsonError("Finance permission required.",403);
+ if(!(await limit("bank:write:"+user.tenantId+":"+user.userId,40,1)))return jsonError("Too many banking requests. Retry shortly.",429);
  const parsed=schema.safeParse(await req.json());if(!parsed.success)return jsonError("Review banking details.");
  const x=parsed.data;
  if(x.action==="import"){
