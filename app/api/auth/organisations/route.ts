@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {z} from "zod";
 import {currentSession,issueSessionToken,saveSession,setSessionCookie,sessionDigest} from "@/lib/auth";
 import {tx,setActor} from "@/lib/db";
-import {jsonError,requireSameOrigin,unexpected} from "@/lib/http";
+import {jsonError,requireSameOrigin,limit,unexpected} from "@/lib/http";
 import {cookies} from "next/headers";
 export const runtime="nodejs";
 export async function GET(){
@@ -18,6 +18,7 @@ export async function GET(){
 export async function POST(req:NextRequest){
  try{
  requireSameOrigin(req);const user=await currentSession();if(!user)return jsonError("Sign in required.",401);
+ if(!(await limit("organisation:switch:"+user.userId,30,15)))return jsonError("Too many organisation switches. Retry later.",429);
  const v=z.object({tenantId:z.string().uuid()}).strict().safeParse(await req.json());
  if(!v.success)return jsonError("Invalid organisation.");
  const token=issueSessionToken();

@@ -3,7 +3,7 @@ import {randomUUID} from "node:crypto";
 import {z} from "zod";
 import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
-import {jsonError,requireSameOrigin,unexpected} from "@/lib/http";
+import {jsonError,requireSameOrigin,limit,unexpected} from "@/lib/http";
 import {toCents,fromCents,validatePosting,type PostingLine} from "@/lib/money";
 export const runtime="nodejs";
 const money=z.string().regex(/^(0|[1-9][0-9]{0,14})(\.[0-9]{1,2})?$/);
@@ -16,6 +16,7 @@ export async function POST(req:NextRequest){
  requireSameOrigin(req);const user=await currentSession();
  if(!user)return jsonError("Sign in required.",401);
  if(!canWrite(user.role))return jsonError("Finance permission required.",403);
+ if(!(await limit("invoice:create:"+user.tenantId+":"+user.userId,60,1)))return jsonError("Too many invoice requests. Retry shortly.",429);
  const val=schema.safeParse(await req.json());if(!val.success)return jsonError("Review invoice fields.");
  const x=val.data;if(x.dueDate<x.invoiceDate)return jsonError("Due date precedes invoice date.");
  const net=toCents(x.netAmount),tax=toCents(x.taxAmount);if(net<=0n)return jsonError("Net amount must be positive.");

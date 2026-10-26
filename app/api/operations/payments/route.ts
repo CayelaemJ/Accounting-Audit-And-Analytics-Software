@@ -4,7 +4,7 @@ import {z} from "zod";
 import {currentSession,canWrite} from "@/lib/auth";
 import {tenantTx} from "@/lib/db";
 import {toCents,fromCents,validatePosting,type PostingLine} from "@/lib/money";
-import {jsonError,requireSameOrigin,unexpected} from "@/lib/http";
+import {jsonError,requireSameOrigin,limit,unexpected} from "@/lib/http";
 export const runtime="nodejs";
 const schema=z.object({
  invoiceId:z.string().uuid(),cashAccountId:z.string().uuid(),amount:z.string().max(24),
@@ -14,6 +14,7 @@ export async function POST(req:NextRequest){
  try{
  requireSameOrigin(req);const session=await currentSession();if(!session)return jsonError("Sign in required.",401);
  if(!canWrite(session.role))return jsonError("Finance permission required.",403);
+ if(!(await limit("payment:post:"+session.tenantId+":"+session.userId,60,1)))return jsonError("Too many payment requests. Retry shortly.",429);
  const v=schema.safeParse(await req.json());if(!v.success)return jsonError("Review payment details.");
  const x=v.data;let cents:bigint;try{cents=toCents(x.amount);}catch{return jsonError("Invalid payment amount.");}
  if(cents<=0n)return jsonError("Payment must be positive.");
