@@ -1,3 +1,4 @@
+import {validISODate} from "@/lib/aging";
 import {NextRequest,NextResponse} from "next/server";
 import {randomUUID} from "node:crypto";
 import {z} from "zod";
@@ -18,7 +19,8 @@ export async function POST(req:NextRequest){
  if(!canWrite(user.role))return jsonError("Finance permission required.",403);
  if(!(await limit("invoice:create:"+user.tenantId+":"+user.userId,60,1)))return jsonError("Too many invoice requests. Retry shortly.",429);
  const val=schema.safeParse(await req.json());if(!val.success)return jsonError("Review invoice fields.");
- const x=val.data;if(x.dueDate<x.invoiceDate)return jsonError("Due date precedes invoice date.");
+ const x=val.data;if(!validISODate(x.invoiceDate)||!validISODate(x.dueDate))return jsonError("Invalid invoice or due date.");
+ if(x.dueDate<x.invoiceDate)return jsonError("Due date precedes invoice date.");
  const net=toCents(x.netAmount),tax=toCents(x.taxAmount);if(net<=0n)return jsonError("Net amount must be positive.");
  const gross=fromCents(net+tax);
  const result=await tenantTx(user,async c=>{
