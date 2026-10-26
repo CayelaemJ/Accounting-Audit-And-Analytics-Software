@@ -1,8 +1,9 @@
-import { randomBytes, createHash, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, createHash, scrypt as nodeScrypt } from "node:crypto";
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { pool, tx, setActor } from "@/lib/db";
 import type { PoolClient } from "pg";
+import { verifyStoredPassword } from "./password-policy";
 
 const scrypt = promisify(nodeScrypt);
 const COOKIE = "cabo_session";
@@ -14,11 +15,7 @@ export async function hashPassword(password: string) {
   return "scrypt:" + salt + ":" + key.toString("hex");
 }
 export async function verifyPassword(password: string, stored: string) {
-  const parts = stored.split(":");
-  if (parts.length !== 3 || parts[0] !== "scrypt") return false;
-  const actual = await scrypt(password, parts[1], 64) as Buffer;
-  const expected = Buffer.from(parts[2], "hex");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  return verifyStoredPassword(password, stored);
 }
 export function issueSessionToken() { return randomBytes(32).toString("base64url"); }
 export async function saveSession(client: PoolClient, userId: string, tenantId: string, token: string) {
