@@ -107,7 +107,7 @@ async function ofxUpload(bankAccountId=cash.id,expectedLast4="1234"){
  form.set("expectedLast4",expectedLast4);
  form.set("statement",new Blob([ofx],{type:"application/octet-stream"}),"smoke-statement.ofx");
  const response=await fetch(base+"/api/operations/statements/import",{
-  method:"POST",headers:{Origin:base,Cookie:cookie},body:form
+  method:"POST",headers:{Origin:"https://127.0.0.1:3123",Cookie:cookie},body:form
  });
  const body=await response.json();
  return {status:response.status,result:body};
