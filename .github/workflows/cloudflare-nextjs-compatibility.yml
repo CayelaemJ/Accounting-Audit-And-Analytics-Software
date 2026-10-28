@@ -1,0 +1,34 @@
+name: Cloudflare Next.js compatibility assessment
+on:
+  push:
+    branches: [chore/cloudflare-workers-compatibility-20261028]
+  pull_request:
+    branches: [feature/cabo-financial-intelligence-foundation]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify baseline TypeScript
+        run: npm run typecheck
+      - name: Run finance safety tests
+        run: npm test
+      - name: Check Cloudflare vinext compatibility (report only)
+        continue-on-error: true
+        run: |
+          npx --yes vinext check > cloudflare-compatibility-report.txt 2>&1
+          cat cloudflare-compatibility-report.txt
+      - name: Preserve compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cabo-financial-workers-compatibility
+          path: cloudflare-compatibility-report.txt
+          if-no-files-found: ignore
