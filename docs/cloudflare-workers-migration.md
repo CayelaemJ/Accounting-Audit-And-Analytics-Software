@@ -20,3 +20,19 @@ https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/
 
 ## Explicit exclusions
 **NewChanges is not part of this migration and must remain on Render.** Other existing Render services remain intact until replacement testing succeeds.
+
+## Compatibility check results (2026-10-28)
+
+Cloudflare vinext CLI run:
+https://github.com/CayelaemJ/Accounting-Audit-And-Analytics-Software/actions/runs/40703112898
+- All 4 imported Next.js APIs assessed as supported.
+- 2/3 configuration options fully supported, with `reactStrictMode` partial.
+- 1/1 library checks compatible.
+- Overall **96% static compatibility**, 12 supported, 1 partial, 0 issues.
+- Existing TypeScript and finance unit tests passed.
+- CLI output is preserved as workflow artifact `cabo-financial-workers-compatibility`.
+
+This is a **compatibility assessment only**, not a compiled vinext deployment,
+database integration test or banking/regulatory acceptance. Continue with a
+separate vinext/OpenNext branch and an isolated synthetic end-to-end test before
+touching production traffic.
