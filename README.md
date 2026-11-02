@@ -1,3 +1,7 @@
+> 📐 **[Explore the project architecture, diagrams and technical deep dive](docs/PORTFOLIO_SHOWCASE.md)** · [Engineering profile](https://github.com/CayelaemJ)
+
+---
+
 # CABO Financial Intelligence
 
 A CABO Solutions financial operations platform, using the official CABO palette and a modular Next.js/TypeScript + PostgreSQL stack. **Current environment: gated staging, not production.**
